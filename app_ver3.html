@@ -1,0 +1,366 @@
+<!-- リアルタイム文字起こしとテキスト読み上げの枠を統一 -->
+ <!-- lineのような自然な対話の形 -->
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>総合コミュニケーション支援ツール (Web版)</title>
+    <style>
+        :root { --font-size: 16px; }
+        body { font-family: sans-serif; background-color: #f4f7f6; margin: 0; padding: 15px; font-size: var(--font-size); color: #333; }
+        .header { display: flex; justify-content: space-between; align-items: center; max-width: 1000px; margin: 0 auto 15px; flex-wrap: wrap; gap: 10px; }
+        h1 { font-size: 1.5rem; margin: 0; color: #2c3e50; }
+        .controls, .dict-panel, .guide-panel { background: white; padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; max-width: 1000px; margin-left: auto; margin-right: auto; }
+        .controls { display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
+        .controls label { font-size: 0.9rem; font-weight: bold; }
+        
+        /* 統合されたメインチャットエリア */
+        .chat-container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
+        .chat-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 8px; margin-bottom: 15px; }
+        h2 { font-size: 1.2rem; margin: 0; }
+        textarea { width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 5px; border: 1px solid #ced4da; border-radius: 6px; resize: vertical; font-size: 1em; min-height: 350px; background-color: #fafafa; transition: border-color 0.2s; line-height: 1.5; }
+        textarea:focus { outline: none; border-color: #0d6efd; background-color: #fff; }
+        
+        /* 入力エリアのレイアウト */
+        .input-row { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+        .input-row input[type="text"] { flex-grow: 1; margin-bottom: 0; min-width: 200px; }
+        
+        /* パーツの共通デザイン */
+        input[type="text"], select { box-sizing: border-box; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 1em; }
+        button { background-color: #0d6efd; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 1em; font-weight: bold; transition: background-color 0.2s; white-space: nowrap; }
+        button:hover { background-color: #0b5ed7; }
+        .stop-btn { background-color: #dc3545; }
+        .stop-btn:hover { background-color: #c82333; }
+        .clear-btn { background-color: #6c757d; padding: 8px 15px; font-size: 0.9em; }
+        .clear-btn:hover { background-color: #5a6268; }
+        .font-btn { background-color: #e9ecef; color: #333; padding: 5px 12px; margin-left: 5px; }
+        .font-btn:hover { background-color: #dde2e6; }
+        .settings-item { flex: 1; }
+        
+        /* 辞書機能用のデザイン */
+        .dict-summary, .guide-summary { font-weight: bold; cursor: pointer; outline: none; padding: 5px 0; }
+        .dict-input-row { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .dict-input-row input { margin-bottom: 0; flex: 1; min-width: 150px; }
+        .dict-list { list-style: none; padding: 0; margin-top: 15px; max-height: 150px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; }
+        .dict-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 0.95em; }
+        .dict-item:nth-child(even) { background-color: #fcfcfc; }
+        .dict-delete-btn { background-color: #dc3545; padding: 4px 8px; font-size: 0.8em; border-radius: 4px; }
+        
+        /* 認識中の文字表示 */
+        #sttInterim { min-height: 1.5em; color: #0d6efd; font-weight: bold; font-size: 0.95em; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>総合コミュニケーション支援ツール</h1>
+        <div>
+            文字サイズ: 
+            <button class="font-btn" onclick="changeFontSize(2)">大きくなる</button>
+            <button class="font-btn" onclick="changeFontSize(-2)">小さくなる</button>
+        </div>
+    </div>
+
+    <details class="guide-panel">
+        <summary class="guide-summary">💡 このアプリの便利な使い方</summary>
+        <div style="margin-top: 10px; font-size: 0.95em; color: #444;">
+            <ul style="padding-left: 20px; margin-bottom: 0; line-height: 1.6;">
+                <li style="margin-bottom: 8px;"><b>手動で修正する：</b> 会話ノートは自由に書き換え可能です．誤字があれば直接修正できます．</li>
+                <li style="margin-bottom: 8px;"><b>辞書へスピード登録：</b> ノート内の間違った言葉を<b>カーソルでなぞる（選択する）</b>と，自動で下の辞書パネルが開きます．正しい言葉を入力してEnterを押すだけで即登録されます．</li>
+                <li style="margin-bottom: 8px;"><b>送信ショートカット：</b> 下部の入力欄に返答を打ち込み <b>Enterキー</b> を押すだけで，送信と読み上げが実行されます．</li>
+                <li><b>自動保存機能：</b> 文字サイズ，声の設定，辞書，会話の履歴はすべて自動保存されるため，ページを閉じても安心です．</li>
+            </ul>
+        </div>
+    </details>
+
+    <details class="dict-panel" id="dictPanel">
+        <summary class="dict-summary">📖 ユーザー辞書設定（よく間違えられる言葉の登録）</summary>
+        <div class="dict-input-row">
+            <input type="text" id="dictWrong" placeholder="誤認識される言葉 (ノートをなぞると自動入力されます)">
+            <input type="text" id="dictCorrect" placeholder="正しい言葉 (例: F#)">
+            <button id="addDictBtn" style="padding: 10px 20px;">追加 (Enter)</button>
+        </div>
+        <ul id="dictList" class="dict-list"></ul>
+    </details>
+
+    <div class="controls">
+        <div class="settings-item" style="min-width: 200px;">
+            <label for="voiceSelect">👤 声の種類:</label>
+            <select id="voiceSelect"></select>
+        </div>
+        <div class="settings-item">
+            <label for="rateSlider">🏃 速度: <span id="rateValue">1.0</span></label>
+            <input type="range" id="rateSlider" min="0.5" max="2" value="1" step="0.1" style="width: 100%;">
+        </div>
+        <div class="settings-item">
+            <label for="pitchSlider">🎵 高さ: <span id="pitchValue">1.0</span></label>
+            <input type="range" id="pitchSlider" min="0" max="2" value="1" step="0.1" style="width: 100%;">
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>💬 会話ノート</h2>
+            <button id="clearChatBtn" class="clear-btn">🗑️ 履歴をリセット</button>
+        </div>
+        
+        <textarea id="chatLog" placeholder="ここに相手との会話の履歴が表示されます．自由に書き換えることも可能です..."></textarea>
+        <div id="sttInterim"></div>
+
+        <div class="input-row">
+            <button id="startBtn">🎤 音声認識開始</button>
+            <button id="stopBtn" class="stop-btn" style="display:none;">⏹️ 認識停止</button>
+            
+            <input type="text" id="ttsInput" placeholder="ここに返答を入力してEnterで送信・読み上げ">
+            <button id="speakBtn">🗣️ 送信</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 0. ユーザー辞書機能 ---
+        let customDictionary = JSON.parse(localStorage.getItem('userDictionary')) || {};
+        const dictPanel = document.getElementById('dictPanel');
+        const dictWrong = document.getElementById('dictWrong');
+        const dictCorrect = document.getElementById('dictCorrect');
+        const dictList = document.getElementById('dictList');
+
+        function renderDictionary() {
+            dictList.innerHTML = '';
+            for (const [wrong, correct] of Object.entries(customDictionary)) {
+                const li = document.createElement('li');
+                li.className = 'dict-item';
+                li.innerHTML = `<span><b>${wrong}</b> ➔ ${correct}</span> <button class="dict-delete-btn" onclick="deleteDictWord('${wrong}')">削除</button>`;
+                dictList.appendChild(li);
+            }
+        }
+
+        document.getElementById('addDictBtn').onclick = () => {
+            const w = dictWrong.value.trim();
+            const c = dictCorrect.value.trim();
+            if (w && c) {
+                customDictionary[w] = c;
+                localStorage.setItem('userDictionary', JSON.stringify(customDictionary));
+                renderDictionary();
+                dictWrong.value = '';
+                dictCorrect.value = '';
+                document.getElementById('chatLog').focus(); 
+            }
+        };
+
+        dictCorrect.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('addDictBtn').click();
+            }
+        });
+
+        window.deleteDictWord = (wrong) => {
+            delete customDictionary[wrong];
+            localStorage.setItem('userDictionary', JSON.stringify(customDictionary));
+            renderDictionary();
+        };
+
+        function applyDictionary(text) {
+            let result = text;
+            for (const [wrong, correct] of Object.entries(customDictionary)) {
+                result = result.split(wrong).join(correct);
+            }
+            return result;
+        }
+
+        // --- 1. UIと設定値の読み込み ---
+        let currentFontSize = 16;
+        function changeFontSize(change) {
+            currentFontSize += change;
+            if(currentFontSize < 12) currentFontSize = 12;
+            if(currentFontSize > 32) currentFontSize = 32;
+            document.documentElement.style.setProperty('--font-size', currentFontSize + 'px');
+            localStorage.setItem('appFontSize', currentFontSize);
+        }
+
+        const rateSlider = document.getElementById('rateSlider');
+        const pitchSlider = document.getElementById('pitchSlider');
+        const chatLog = document.getElementById('chatLog');
+        let chatHistory = ''; // 統合された会話ログを保持する変数
+
+        window.onload = () => {
+            renderDictionary();
+            if(localStorage.getItem('appFontSize')) {
+                currentFontSize = parseInt(localStorage.getItem('appFontSize'));
+                document.documentElement.style.setProperty('--font-size', currentFontSize + 'px');
+            }
+            
+            // 統合されたチャット履歴を復元
+            if(localStorage.getItem('chatHistory')) {
+                chatHistory = localStorage.getItem('chatHistory');
+                chatLog.value = chatHistory;
+            }
+            
+            if(localStorage.getItem('ttsRate')) {
+                rateSlider.value = localStorage.getItem('ttsRate');
+                document.getElementById('rateValue').textContent = rateSlider.value;
+            }
+            if(localStorage.getItem('ttsPitch')) {
+                pitchSlider.value = localStorage.getItem('ttsPitch');
+                document.getElementById('pitchValue').textContent = pitchSlider.value;
+            }
+
+            chatLog.scrollTop = chatLog.scrollHeight;
+        };
+
+        // 手動編集された内容を記憶と同期
+        chatLog.addEventListener('input', () => {
+            chatHistory = chatLog.value;
+            localStorage.setItem('chatHistory', chatHistory);
+        });
+
+        // テキスト選択（なぞる）で辞書パネル連動
+        chatLog.addEventListener('mouseup', () => {
+            const selectedText = window.getSelection().toString().trim();
+            if (selectedText) {
+                dictPanel.open = true;
+                dictWrong.value = selectedText;
+                dictCorrect.focus();
+            }
+        });
+
+        // リセット機能
+        document.getElementById('clearChatBtn').onclick = () => {
+            if(confirm("会話の履歴をすべて消去しますか？")) {
+                chatHistory = '';
+                chatLog.value = '';
+                localStorage.removeItem('chatHistory');
+            }
+        };
+
+        // --- 2. 音声合成 (TTS) ---
+        const synth = window.speechSynthesis;
+        const voiceSelect = document.getElementById('voiceSelect');
+        let voices = [];
+
+        function populateVoiceList() {
+            voices = synth.getVoices().filter(voice => voice.lang.includes('ja'));
+            voiceSelect.innerHTML = '';
+            const savedVoiceName = localStorage.getItem('ttsVoice'); 
+            let selectedIndex = 0;
+            voices.forEach((voice, i) => {
+                const option = document.createElement('option');
+                option.textContent = voice.name;
+                option.value = i;
+                if (voice.name === savedVoiceName) selectedIndex = i;
+                voiceSelect.appendChild(option);
+            });
+            voiceSelect.value = selectedIndex;
+        }
+        
+        populateVoiceList();
+        if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = populateVoiceList;
+
+        voiceSelect.onchange = () => { if (voices[voiceSelect.value]) localStorage.setItem('ttsVoice', voices[voiceSelect.value].name); };
+        rateSlider.oninput = () => { document.getElementById('rateValue').textContent = rateSlider.value; localStorage.setItem('ttsRate', rateSlider.value); };
+        pitchSlider.oninput = () => { document.getElementById('pitchValue').textContent = pitchSlider.value; localStorage.setItem('ttsPitch', pitchSlider.value); };
+
+        const speakBtn = document.getElementById('speakBtn');
+        const ttsInput = document.getElementById('ttsInput');
+
+        function speakAndLog() {
+            const text = ttsInput.value.trim();
+            if (!text) return;
+
+            // 読み上げ実行
+            const uttr = new SpeechSynthesisUtterance(text);
+            uttr.lang = 'ja-JP';
+            const selectedVoice = voices[voiceSelect.value];
+            if (selectedVoice) uttr.voice = selectedVoice;
+            uttr.rate = parseFloat(rateSlider.value);
+            uttr.pitch = parseFloat(pitchSlider.value);
+            synth.speak(uttr);
+
+            // 履歴に追記
+            chatHistory += "あなた： " + text + "\n\n";
+            chatLog.value = chatHistory;
+            chatLog.scrollTop = chatLog.scrollHeight;
+            localStorage.setItem('chatHistory', chatHistory);
+            ttsInput.value = '';
+        }
+
+        speakBtn.onclick = speakAndLog;
+        ttsInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                speakAndLog();
+            }
+        });
+
+        // --- 3. 文字起こし (STT) ---
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const sttInterim = document.getElementById('sttInterim');
+
+        let recognition;
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'ja-JP';
+            recognition.continuous = true;
+            recognition.interimResults = true;
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let newFinal = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        newFinal += event.results[i][0].transcript + '．\n\n';
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+                
+                newFinal = applyDictionary(newFinal);
+                interimTranscript = applyDictionary(interimTranscript);
+                
+                // 確定した言葉があれば履歴に追記
+                if (newFinal) {
+                    chatHistory += "相手： " + newFinal;
+                    chatLog.value = chatHistory;
+                    localStorage.setItem('chatHistory', chatHistory);
+                }
+
+                // 認識中の言葉を専用エリアに表示
+                if (interimTranscript) {
+                    sttInterim.textContent = "👂 相手（聞き取り中...）： " + interimTranscript;
+                } else {
+                    sttInterim.textContent = "";
+                }
+                
+                // 手動修正中（ノートにカーソルがある時）は勝手にスクロールしない
+                const isFocused = (document.activeElement === chatLog);
+                if (!isFocused && (newFinal || interimTranscript)) {
+                    chatLog.scrollTop = chatLog.scrollHeight;
+                }
+            };
+
+            recognition.onend = () => {
+                if (stopBtn.style.display === 'inline-block') recognition.start();
+            };
+
+            startBtn.onclick = () => {
+                recognition.start();
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-block';
+            };
+
+            stopBtn.onclick = () => {
+                recognition.stop();
+                sttInterim.textContent = "";
+                startBtn.style.display = 'inline-block';
+                stopBtn.style.display = 'none';
+            };
+        } else {
+            chatLog.value = "お使いのブラウザは音声認識に対応していません．ChromeやEdgeをご利用ください．\n\n" + chatHistory;
+            startBtn.disabled = true;
+        }
+    </script>
+</body>
+</html>
