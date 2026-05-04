@@ -1,166 +1,405 @@
-<!-- リアルタイム文字起こしとテキスト読み上げの枠を統一 -->
- <!-- lineのような自然な対話の形 -->
+<!-- ver15-2 -->
+
+<!-- PCでは通信設定パネルが画面左側に
+ （横幅が狭いと上に） -->
 
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>総合コミュニケーション支援ツール (Web版)</title>
     <style>
         :root { --font-size: 16px; }
-        body { font-family: sans-serif; background-color: #f4f7f6; margin: 0; padding: 15px; font-size: var(--font-size); color: #333; }
-        .header { display: flex; justify-content: space-between; align-items: center; max-width: 1000px; margin: 0 auto 15px; flex-wrap: wrap; gap: 10px; }
-        h1 { font-size: 1.5rem; margin: 0; color: #2c3e50; }
-        .controls, .dict-panel, .guide-panel { background: white; padding: 10px 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 15px; max-width: 1000px; margin-left: auto; margin-right: auto; }
-        .controls { display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
-        .controls label { font-size: 0.9rem; font-weight: bold; }
+        body { font-family: sans-serif; background-color: #f4f7f6; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; margin: 0; padding: 10px; font-size: var(--font-size); color: #333; display: flex; flex-direction: column; height: 100dvh; box-sizing: border-box; overflow: hidden; }
         
-        /* 統合されたメインチャットエリア */
-        .chat-container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
-        .chat-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 8px; margin-bottom: 15px; }
-        h2 { font-size: 1.2rem; margin: 0; }
-        textarea { width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 5px; border: 1px solid #ced4da; border-radius: 6px; resize: vertical; font-size: 1em; min-height: 350px; background-color: #fafafa; transition: border-color 0.2s; line-height: 1.5; }
-        textarea:focus { outline: none; border-color: #0d6efd; background-color: #fff; }
+        .header { display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; margin-bottom: 10px; }
+        /* ★ 変更: 通信パネルのデザイン（PCでは左側に幅を固定して表示） */
+        /* ★ 変更: 通信パネルの幅を細く（240px）してスリム化 */
+        .sync-panel { background: #e3f2fd; padding: 10px 15px; border-radius: 8px; border: 1px solid #bbdefb; flex-shrink: 0; width: 240px; box-sizing: border-box; overflow-y: auto; max-height: 100%; }        .sync-id { font-weight: bold; font-size: 1.1em; letter-spacing: 1px; color: #1565c0; user-select: all; cursor: pointer; }
+        h1 { font-size: 1.3rem; margin: 0; color: #2c3e50; }
         
-        /* 入力エリアのレイアウト */
-        .input-row { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
-        .input-row input[type="text"] { flex-grow: 1; margin-bottom: 0; min-width: 200px; }
+        .invite-btn { background-color: #6c757d; padding: 4px 8px; font-size: 0.85em; margin-left: 5px; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .invite-btn:hover { background-color: #5a6268; }
+        #qrContainer { display: none; width: 100%; margin-top: 10px; padding: 15px; background: white; border-radius: 8px; text-align: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+        #qrcode { display: inline-block; margin-top: 10px; padding: 10px; background: white; border: 1px solid #eee; border-radius: 8px; }
+
+        .chat-container { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
+        .chat-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 8px; margin-bottom: 10px; flex-shrink: 0; flex-wrap: wrap; gap: 5px;}
+        h2 { font-size: 1.1rem; margin: 0; }
         
-        /* パーツの共通デザイン */
-        input[type="text"], select { box-sizing: border-box; padding: 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 1em; }
-        button { background-color: #0d6efd; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 1em; font-weight: bold; transition: background-color 0.2s; white-space: nowrap; }
+        .chat-textarea { 
+            flex-grow: 1; width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 5px; 
+            border: 1px solid #ced4da; border-radius: 6px; font-size: 1em; 
+            background-color: #f0f4f8; transition: border-color 0.2s; line-height: 1.4; 
+            overflow-y: auto; cursor: text;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        .chat-textarea:focus { outline: none; border-color: #0d6efd; background-color: #fff; }
+        .chat-textarea:empty:before { content: attr(data-placeholder); color: #999; pointer-events: none; }
+
+        .typing-indicator { display: none; background-color: #ff9800; color: white; font-weight: bold; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
+        .wait-btn { background-color: #ff9800; }
+        .wait-btn:hover { background-color: #f57c00; }
+        .wait-btn.active { background-color: #d32f2f; }
+        
+        .tts-highlight-base { background-color: #fff9c4; border-radius: 4px; padding: 2px 0; }
+        .tts-highlight-word { background-color: #ffeb3b; color: #000; font-weight: bold; border-radius: 4px; padding: 2px 2px; border-bottom: 2px solid #fbc02d; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        
+        .meter-container { display: flex; align-items: center; gap: 10px; margin: 5px 0 10px 0; flex-shrink: 0; }
+        .meter-label { font-size: 0.85em; font-weight: bold; color: #555; white-space: nowrap; }
+        .meter-bar-bg { flex-grow: 1; height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); }
+        .meter-bar-fill { height: 100%; width: 0%; background: #4caf50; transition: width 0.05s linear, background-color 0.2s; }
+
+        .input-row { display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0; flex-wrap: wrap; }
+        .input-row input[type="text"], .input-row textarea { flex-grow: 1; margin-bottom: 0; min-width: 150px; }
+        
+        textarea#ttsInput {
+            resize: none; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; 
+            font-size: 1em; line-height: 1.4; box-sizing: border-box; overflow-y: hidden;
+            font-family: inherit;
+        }
+        
+        input[type="text"], select { box-sizing: border-box; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 1em; }
+        button { background-color: #0d6efd; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 1em; font-weight: bold; transition: background-color 0.2s; white-space: nowrap; }
         button:hover { background-color: #0b5ed7; }
         .stop-btn { background-color: #dc3545; }
         .stop-btn:hover { background-color: #c82333; }
-        .clear-btn { background-color: #6c757d; padding: 8px 15px; font-size: 0.9em; }
+        .clear-btn { background-color: #6c757d; padding: 6px 12px; font-size: 0.85em; }
         .clear-btn:hover { background-color: #5a6268; }
-        .font-btn { background-color: #e9ecef; color: #333; padding: 5px 12px; margin-left: 5px; }
-        .font-btn:hover { background-color: #dde2e6; }
-        .settings-item { flex: 1; }
+        .action-btn { background-color: #198754; padding: 6px 12px; font-size: 0.85em; }
+        .action-btn:hover { background-color: #157347; }
         
-        /* 辞書機能用のデザイン */
-        .dict-summary, .guide-summary { font-weight: bold; cursor: pointer; outline: none; padding: 5px 0; }
-        .dict-input-row { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
-        .dict-input-row input { margin-bottom: 0; flex: 1; min-width: 150px; }
-        .dict-list { list-style: none; padding: 0; margin-top: 15px; max-height: 150px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; }
-        .dict-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid #eee; font-size: 0.95em; }
-        .dict-item:nth-child(even) { background-color: #fcfcfc; }
-        .dict-delete-btn { background-color: #dc3545; padding: 4px 8px; font-size: 0.8em; border-radius: 4px; }
+        /* ★ 追加: 設定ページへ移動するボタンのデザイン */
+        .settings-link-btn { background-color: #424649; color: white; text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85em; font-weight: bold; display: inline-block; }
+        .settings-link-btn:hover { background-color: #212529; }
         
-        /* 認識中の文字表示 */
-        #sttInterim { min-height: 1.5em; color: #0d6efd; font-weight: bold; font-size: 0.95em; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>総合コミュニケーション支援ツール</h1>
-        <div>
-            文字サイズ: 
-            <button class="font-btn" onclick="changeFontSize(2)">大きくなる</button>
-            <button class="font-btn" onclick="changeFontSize(-2)">小さくなる</button>
-        </div>
-    </div>
+        #sttInterim { min-height: 1.5em; color: #0d6efd; font-weight: bold; font-size: 0.9em; flex-shrink: 0; margin-top: 5px; }
 
-    <details class="guide-panel">
-        <summary class="guide-summary">💡 このアプリの便利な使い方</summary>
-        <div style="margin-top: 10px; font-size: 0.95em; color: #444;">
-            <ul style="padding-left: 20px; margin-bottom: 0; line-height: 1.6;">
-                <li style="margin-bottom: 8px;"><b>手動で修正する：</b> 会話ノートは自由に書き換え可能です．誤字があれば直接修正できます．</li>
-                <li style="margin-bottom: 8px;"><b>辞書へスピード登録：</b> ノート内の間違った言葉を<b>カーソルでなぞる（選択する）</b>と，自動で下の辞書パネルが開きます．正しい言葉を入力してEnterを押すだけで即登録されます．</li>
-                <li style="margin-bottom: 8px;"><b>送信ショートカット：</b> 下部の入力欄に返答を打ち込み <b>Enterキー</b> を押すだけで，送信と読み上げが実行されます．</li>
-                <li><b>自動保存機能：</b> 文字サイズ，声の設定，辞書，会話の履歴はすべて自動保存されるため，ページを閉じても安心です．</li>
-            </ul>
-        </div>
-    </details>
+        @media (max-width: 500px) {
+            h1 { font-size: 1.1rem; }
+            button { padding: 10px 12px; }
+            .header { flex-direction: column; align-items: flex-start; gap: 5px; }
+            .header > div { align-self: flex-end; }
+            .chat-textarea { line-height: 1.35; }
+        }
 
-    <details class="dict-panel" id="dictPanel">
-        <summary class="dict-summary">📖 ユーザー辞書設定（よく間違えられる言葉の登録）</summary>
-        <div class="dict-input-row">
-            <input type="text" id="dictWrong" placeholder="誤認識される言葉 (ノートをなぞると自動入力されます)">
-            <input type="text" id="dictCorrect" placeholder="正しい言葉 (例: F#)">
-            <button id="addDictBtn" style="padding: 10px 20px;">追加 (Enter)</button>
-        </div>
-        <ul id="dictList" class="dict-list"></ul>
-    </details>
-
-    <div class="controls">
-        <div class="settings-item" style="min-width: 200px;">
-            <label for="voiceSelect">👤 声の種類:</label>
-            <select id="voiceSelect"></select>
-        </div>
-        <div class="settings-item">
-            <label for="rateSlider">🏃 速度: <span id="rateValue">1.0</span></label>
-            <input type="range" id="rateSlider" min="0.5" max="2" value="1" step="0.1" style="width: 100%;">
-        </div>
-        <div class="settings-item">
-            <label for="pitchSlider">🎵 高さ: <span id="pitchValue">1.0</span></label>
-            <input type="range" id="pitchSlider" min="0" max="2" value="1" step="0.1" style="width: 100%;">
-        </div>
-    </div>
-
-    <div class="chat-container">
-        <div class="chat-header">
-            <h2>💬 会話ノート</h2>
-            <button id="clearChatBtn" class="clear-btn">🗑️ 履歴をリセット</button>
-        </div>
+        .caption-bar { display: none; background-color: #e3f2fd; color: #0d47a1; padding: 8px 15px; border-radius: 6px; margin-bottom: 10px; font-weight: bold; text-align: center; border: 2px solid #90caf9; box-shadow: 0 2px 4px rgba(0,0,0,0.1); animation: fadeInOut 3s forwards; }
+        @keyframes fadeInOut { 0% { opacity: 0; transform: translateY(-5px); } 10% { opacity: 1; transform: translateY(0); } 80% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-5px); } }
         
-        <textarea id="chatLog" placeholder="ここに相手との会話の履歴が表示されます．自由に書き換えることも可能です..."></textarea>
-        <div id="sttInterim"></div>
+        .msg-row { display: flex; width: 100%; }
+        .msg-row.right { justify-content: flex-end; }
+        .msg-row.left { justify-content: flex-start; }
+        .msg-wrapper { display: flex; flex-direction: column; max-width: 80%; }
+        .msg-row.right .msg-wrapper { align-items: flex-end; }
+        .msg-row.left .msg-wrapper { align-items: flex-start; }
+        .msg-name { font-size: 0.75em; color: #666; margin-bottom: 4px; font-weight: bold; }
+        .msg-bubble { padding: 8px 14px; border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
+        .msg-row.right .msg-bubble { border-top-right-radius: 2px; }
+        .msg-row.left .msg-bubble { border-top-left-radius: 2px; }
+        .msg-text { white-space: pre-wrap; word-wrap: break-word; display: block; color: #333; }
 
-        <div class="input-row">
-            <button id="startBtn">🎤 音声認識開始</button>
-            <button id="stopBtn" class="stop-btn" style="display:none;">⏹️ 認識停止</button>
-            
-            <input type="text" id="ttsInput" placeholder="ここに返答を入力してEnterで送信・読み上げ">
-            <button id="speakBtn">🗣️ 送信</button>
-        </div>
-    </div>
+        /* 選択時ポップアップ */
+        #selectionPopup { display: none; position: absolute; background-color: #212529; color: white; padding: 6px 12px; border-radius: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); cursor: pointer; font-size: 0.85em; font-weight: bold; z-index: 1000; }
+        #selectionPopup:hover { background-color: #424649; }
+        #selectionPopup::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border-width: 6px; border-style: solid; border-color: #212529 transparent transparent transparent; }
 
-    <script>
-        // --- 0. ユーザー辞書機能 ---
-        let customDictionary = JSON.parse(localStorage.getItem('userDictionary')) || {};
-        const dictPanel = document.getElementById('dictPanel');
-        const dictWrong = document.getElementById('dictWrong');
-        const dictCorrect = document.getElementById('dictCorrect');
-        const dictList = document.getElementById('dictList');
+        /* ★ 追加: 画面分割レイアウト（PCとスマホの切り替え） */
+        .main-wrapper {
+            display: flex;
+            flex-direction: row; /* PCでは横並び（左:通信, 右:ノート） */
+            flex-grow: 1;
+            gap: 15px;
+            min-height: 0;
+            width: 100%;
+        }
 
-        function renderDictionary() {
-            dictList.innerHTML = '';
-            for (const [wrong, correct] of Object.entries(customDictionary)) {
-                const li = document.createElement('li');
-                li.className = 'dict-item';
-                li.innerHTML = `<span><b>${wrong}</b> ➔ ${correct}</span> <button class="dict-delete-btn" onclick="deleteDictWord('${wrong}')">削除</button>`;
-                dictList.appendChild(li);
+        /* 画面幅が768px以下のスマホ・タブレット向けの設定 */
+        @media (max-width: 768px) {
+            .main-wrapper {
+                flex-direction: column; /* スマホでは縦並びに戻す */
+                gap: 10px;
+            }
+            .sync-panel {
+                width: 100%; /* スマホでは横幅いっぱいにする */
+                height: auto;
             }
         }
 
-        document.getElementById('addDictBtn').onclick = () => {
-            const w = dictWrong.value.trim();
-            const c = dictCorrect.value.trim();
-            if (w && c) {
-                customDictionary[w] = c;
-                localStorage.setItem('userDictionary', JSON.stringify(customDictionary));
-                renderDictionary();
-                dictWrong.value = '';
-                dictCorrect.value = '';
-                document.getElementById('chatLog').focus(); 
+    </style>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>コミュニケーション支援ツール</h1>
+        <div>
+            <!-- ★ 変更: ヘッダーに「設定を開く」ボタンを配置 -->
+            <a href="settings.html" target="_blank" class="settings-link-btn">⚙️ 設定・辞書</a>
+        </div>
+    </div>
+
+    <!-- ★ 追加: ここから分割レイアウト用の箱（ラッパー）で囲む -->
+    <div class="main-wrapper">
+
+        <!-- ★ 変更: (オフライン)を改行し、入力欄などを細いパネルに合わせて縦並びに最適化 -->
+        <details class="sync-panel">
+            <summary class="sync-summary" style="line-height: 1.4;">
+                📡 通信・招待機能を開く 
+                <!-- ★ 追加: display: block を使って下に落とし、少し字下げ(padding-left)する -->
+                <span id="syncStatusSummary" style="display: block; font-size: 0.85em; font-weight: normal; color: #555; margin-top: 4px; padding-left: 28px;">(オフライン)</span>
+            </summary>
+            <div style="margin-top: 15px; border-top: 1px dashed #bbdefb; padding-top: 15px;">
+                
+                <div style="margin-bottom: 15px;">
+                    <div style="font-size: 0.9em; color: #555;">あなたのID:</div>
+                    <div id="myPeerId" class="sync-id" style="margin-bottom: 10px; word-break: break-all;">取得中...</div>
+                    <div style="display: flex; gap: 5px;">
+                        <button id="copyUrlBtn" class="invite-btn" style="display:none; margin:0; flex:1; padding: 6px 4px;">🔗 URLコピー</button>
+                        <button id="showQrBtn" class="invite-btn" style="display:none; margin:0; flex:1; padding: 6px 4px;">📱 QR表示</button>
+                    </div>
+                </div>
+
+                <!-- ★ 細い画面に合わせて width: 100% で縦に並べる -->
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <input type="text" id="myNameInput" placeholder="あなたの名前" style="width: 100%; padding: 8px;">
+                    <input type="text" id="targetPeerId" placeholder="相手のIDを入力" style="width: 100%; padding: 8px;">
+                    <button id="connectBtn" style="width: 100%; padding: 10px; font-size: 1em;">接続する</button>
+                </div>
+                
+                <div id="syncStatus" style="width: 100%; font-size: 0.8em; color: #555; margin-top: 15px; text-align: center;">現在オフラインです</div>
+                
+                <div id="qrContainer">
+                    <div style="font-size: 0.85em; color: #555; font-weight: bold;">相手のスマホカメラで<br>読み取ってください</div>
+                    <div id="qrcode"></div>
+                </div>
+            </div>
+        </details>
+
+        <div class="chat-container">
+            <!-- ★ 変更: 会話ノートのヘッダーに環境音AIのスイッチを追加 -->
+            <div class="chat-header">
+                <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                    <h2>💬 会話ノート</h2>
+                    <label class="toggle-switch-label" style="font-size: 0.85em; background: #fff3e0; padding: 4px 10px; border-radius: 20px; border: 1px solid #ffcc80; color: #e65100;">
+                        <input type="checkbox" id="envSoundToggle"> 🔔 環境音AI
+                    </label>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="copyChatBtn" class="action-btn">📋 コピー</button>
+                    <button id="downloadChatBtn" class="action-btn">💾 保存</button>
+                    <button id="clearChatBtn" class="clear-btn">🗑️ リセット</button>
+                </div>
+            </div>
+
+            <div id="envSoundCaption" class="caption-bar"></div>
+            <div id="typingIndicator" class="typing-indicator"></div>
+            <div id="selectionPopup">📖 辞書に登録</div>
+            
+            <div id="chatLog" class="chat-textarea" contenteditable="false" data-placeholder="ここに会話の履歴が表示されます..."></div>
+            <div id="sttInterim"></div>
+
+            <div class="meter-container">
+                <span class="meter-label">🎤 マイク入力:</span>
+                <div class="meter-bar-bg"><div id="volumeMeter" class="meter-bar-fill"></div></div>
+            </div>
+
+            <div class="input-row">
+                <button id="startBtn">🎤 聞き取り開始</button>
+                <button id="stopBtn" class="stop-btn" style="display:none;">⏹️ 停止</button>
+                <button id="waitBtn" class="wait-btn">🖐️ 待って</button>
+                <textarea id="ttsInput" rows="1" placeholder="返答を入力 (Enterで送信 / Shift+Enterで改行)"></textarea>
+                <button id="speakBtn">🗣️ 送信</button>
+            </div>
+        </div>
+
+    </div>
+    <!-- ★ 追加: ここで箱（ラッパー）を閉じる -->
+
+    <script>
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        
+        // ★ 追加: 定期的に設定データ（フォントや辞書）を読み込み直す処理
+        // 別タブで設定が変更された時に、リアルタイムで反映させるための仕掛けです。
+        let customDictionary = JSON.parse(localStorage.getItem('userDictionary')) || {};
+        let currentFontSize = parseInt(localStorage.getItem('appFontSize')) || 16;
+        let savedTtsRate = parseFloat(localStorage.getItem('ttsRate')) || 1.0;
+        let savedTtsPitch = parseFloat(localStorage.getItem('ttsPitch')) || 1.0;
+        
+        function loadSettings() {
+            customDictionary = JSON.parse(localStorage.getItem('userDictionary')) || {};
+            
+            const newFontSize = parseInt(localStorage.getItem('appFontSize')) || 16;
+            if (newFontSize !== currentFontSize) {
+                currentFontSize = newFontSize;
+                document.documentElement.style.setProperty('--font-size', currentFontSize + 'px');
+            }
+
+            savedTtsRate = parseFloat(localStorage.getItem('ttsRate')) || 1.0;
+            savedTtsPitch = parseFloat(localStorage.getItem('ttsPitch')) || 1.0;
+        }
+        
+        // 1秒に1回、裏側でこっそり設定ファイルの変更をチェックする
+        setInterval(loadSettings, 1000);
+        document.documentElement.style.setProperty('--font-size', currentFontSize + 'px');
+
+        // --- 通信機能 ---
+        let peer = null;
+        let connections = [];
+        const myNameInput = document.getElementById('myNameInput');
+        
+        if (localStorage.getItem('myDisplayName')) myNameInput.value = localStorage.getItem('myDisplayName');
+        myNameInput.addEventListener('input', () => localStorage.setItem('myDisplayName', myNameInput.value));
+        function getMyName() { return myNameInput.value.trim() || '名無し'; }
+
+        let isMyTyping = false;
+        let typingTimeout = null;
+        const waitBtn = document.getElementById('waitBtn');
+        const typingIndicator = document.getElementById('typingIndicator');
+
+        waitBtn.onclick = () => {
+            isMyTyping = !isMyTyping;
+            if (isMyTyping) {
+                waitBtn.classList.add('active');
+                waitBtn.textContent = '🛑 入力中(解除)';
+                broadcastTypingState(true);
+            } else {
+                waitBtn.classList.remove('active');
+                waitBtn.textContent = '🖐️ 待って';
+                broadcastTypingState(false);
             }
         };
 
-        dictCorrect.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                document.getElementById('addDictBtn').click();
+        function broadcastTypingState(isTyping) {
+            const currentName = getMyName() === '名無し' ? '相手' : getMyName();
+            connections.forEach(conn => {
+                if (conn.open) conn.send({ type: 'typing', name: currentName, isTyping: isTyping });
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedMessages = localStorage.getItem('chatMessages');
+            if (savedMessages) {
+                try {
+                    chatMessages = JSON.parse(savedMessages);
+                    renderMessages();
+                } catch(e) { chatMessages = []; }
             }
+
+            if (isAndroid) document.querySelector('.meter-container').style.display = 'none';
+
+            peer = new Peer(); 
+            const urlParams = new URLSearchParams(window.location.search);
+            const inviteId = urlParams.get('room');
+            
+            peer.on('open', (id) => {
+                document.getElementById('myPeerId').textContent = id;
+                const currentUrl = window.location.origin + window.location.pathname;
+                const inviteUrl = currentUrl + '?room=' + id;
+                
+                const copyUrlBtn = document.getElementById('copyUrlBtn');
+                const showQrBtn = document.getElementById('showQrBtn');
+                const qrContainer = document.getElementById('qrContainer');
+                
+                copyUrlBtn.style.display = 'inline-block';
+                showQrBtn.style.display = 'inline-block';
+
+                copyUrlBtn.onclick = () => {
+                    navigator.clipboard.writeText(inviteUrl).then(() => {
+                        alert("招待URLをコピーしました！LINEやメールで相手に送ってください。\n\n" + inviteUrl);
+                    }).catch(() => { alert("コピーに失敗しました。手動でコピーしてください。\n" + inviteUrl); });
+                };
+
+                showQrBtn.onclick = () => {
+                    if (qrContainer.style.display === 'block') {
+                        qrContainer.style.display = 'none';
+                        showQrBtn.textContent = '📱 QR表示';
+                    } else {
+                        qrContainer.style.display = 'block';
+                        showQrBtn.textContent = '📱 閉じる';
+                        document.getElementById('qrcode').innerHTML = ''; 
+                        new QRCode(document.getElementById("qrcode"), {
+                            text: inviteUrl, width: 150, height: 150, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.M
+                        });
+                    }
+                };
+
+                if (inviteId && inviteId !== id) {
+                    document.getElementById('targetPeerId').value = inviteId;
+                    setTimeout(() => document.getElementById('connectBtn').click(), 800);
+                }
+            });
+
+            peer.on('connection', (conn) => setupConnection(conn));
         });
 
-        window.deleteDictWord = (wrong) => {
-            delete customDictionary[wrong];
-            localStorage.setItem('userDictionary', JSON.stringify(customDictionary));
-            renderDictionary();
+        document.getElementById('connectBtn').onclick = () => {
+            const targetId = document.getElementById('targetPeerId').value.trim();
+            if (!targetId) return;
+            const conn = peer.connect(targetId);
+            setupConnection(conn);
         };
 
+        function setupConnection(conn) {
+            conn.on('open', () => {
+                connections.push(conn);
+                document.getElementById('syncStatus').textContent = `✅ 接続完了 (${connections.length}台と通信中)`;
+                document.getElementById('syncStatusSummary').textContent = `(✅ ${connections.length}台と通信中)`;
+                document.getElementById('targetPeerId').value = '';
+                if (chatMessages.length > 0) conn.send({ type: 'history', messages: chatMessages });
+            });
+
+            conn.on('data', (data) => {
+                if (data.type === 'text') {
+                    const senderName = data.name || '相手';
+                    addMessage(senderName, data.text.trim(), 'remote');
+                    connections.forEach(c => { if (c !== conn && c.open) c.send(data); });
+                }
+                else if (data.type === 'history') {
+                    if (data.messages && data.messages.length > chatMessages.length) {
+                        const myCurrentName = getMyName() === '名無し' ? 'あなた' : getMyName();
+                        chatMessages = data.messages.map(m => {
+                            if (m.name !== myCurrentName) return { name: m.name, text: m.text, type: 'remote' };
+                            return m; 
+                        });
+                        renderMessages();
+                        saveMessages();
+                    }
+                }
+                else if (data.type === 'typing') {
+                    if (data.isTyping) {
+                        typingIndicator.textContent = `🖐️ ${data.name} さんが入力中です... 少しお待ちください`;
+                        typingIndicator.style.display = 'block';
+                        clearTimeout(typingTimeout);
+                        typingTimeout = setTimeout(() => typingIndicator.style.display = 'none', 15000);
+                    } else {
+                        typingIndicator.style.display = 'none';
+                        clearTimeout(typingTimeout);
+                    }
+                    connections.forEach(c => { if (c !== conn && c.open) c.send(data); });
+                }
+            });
+
+            conn.on('close', () => {
+                connections = connections.filter(c => c !== conn);
+                const st = connections.length > 0 ? `✅ 接続完了 (${connections.length}台と通信中)` : `現在オフラインです（1人で使用中）`;
+                document.getElementById('syncStatus').textContent = st;
+                document.getElementById('syncStatusSummary').textContent = connections.length > 0 ? `(✅ ${connections.length}台と通信中)` : `(オフライン)`;
+            });
+        }
+
+        function broadcastData(text) {
+            const currentName = getMyName(); 
+            connections.forEach(conn => { if (conn.open) conn.send({ type: 'text', text: text, name: currentName }); });
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+        }
+
+        // --- 辞書とテキスト置換 ---
         function applyDictionary(text) {
             let result = text;
             for (const [wrong, correct] of Object.entries(customDictionary)) {
@@ -169,97 +408,96 @@
             return result;
         }
 
-        // --- 1. UIと設定値の読み込み ---
-        let currentFontSize = 16;
-        function changeFontSize(change) {
-            currentFontSize += change;
-            if(currentFontSize < 12) currentFontSize = 12;
-            if(currentFontSize > 32) currentFontSize = 32;
-            document.documentElement.style.setProperty('--font-size', currentFontSize + 'px');
-            localStorage.setItem('appFontSize', currentFontSize);
-        }
-
-        const rateSlider = document.getElementById('rateSlider');
-        const pitchSlider = document.getElementById('pitchSlider');
+        // --- チャットUI ---
         const chatLog = document.getElementById('chatLog');
-        let chatHistory = ''; // 統合された会話ログを保持する変数
+        let chatMessages = []; 
 
-        window.onload = () => {
-            renderDictionary();
-            if(localStorage.getItem('appFontSize')) {
-                currentFontSize = parseInt(localStorage.getItem('appFontSize'));
-                document.documentElement.style.setProperty('--font-size', currentFontSize + 'px');
-            }
-            
-            // 統合されたチャット履歴を復元
-            if(localStorage.getItem('chatHistory')) {
-                chatHistory = localStorage.getItem('chatHistory');
-                chatLog.value = chatHistory;
-            }
-            
-            if(localStorage.getItem('ttsRate')) {
-                rateSlider.value = localStorage.getItem('ttsRate');
-                document.getElementById('rateValue').textContent = rateSlider.value;
-            }
-            if(localStorage.getItem('ttsPitch')) {
-                pitchSlider.value = localStorage.getItem('ttsPitch');
-                document.getElementById('pitchValue').textContent = pitchSlider.value;
-            }
-
-            chatLog.scrollTop = chatLog.scrollHeight;
+        const MSG_STYLES = {
+            tts:    { bg: '#e8f5e9', border: '#66bb6a', nameColor: '#2e7d32' }, 
+            stt:    { bg: '#e3f2fd', border: '#42a5f5', nameColor: '#1565c0' }, 
+            remote: { bg: '#fff3e0', border: '#ffa726', nameColor: '#e65100' }  
         };
 
-        // 手動編集された内容を記憶と同期
-        chatLog.addEventListener('input', () => {
-            chatHistory = chatLog.value;
-            localStorage.setItem('chatHistory', chatHistory);
-        });
+        const REMOTE_PALETTES = [
+            { bg: '#fff3e0', border: '#ffa726', nameColor: '#e65100' }, { bg: '#fce4ec', border: '#f06292', nameColor: '#c2185b' },
+            { bg: '#e3f2fd', border: '#64b5f6', nameColor: '#1565c0' }, { bg: '#f3e5f5', border: '#ba68c8', nameColor: '#7b1fa2' },
+            { bg: '#e0f7fa', border: '#4dd0e1', nameColor: '#006064' }, { bg: '#fffde7', border: '#dce775', nameColor: '#827717' }
+        ];
 
-        // テキスト選択（なぞる）で辞書パネル連動
-        chatLog.addEventListener('mouseup', () => {
-            const selectedText = window.getSelection().toString().trim();
-            if (selectedText) {
-                dictPanel.open = true;
-                dictWrong.value = selectedText;
-                dictCorrect.focus();
-            }
-        });
+        function getColorForName(name) {
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            return REMOTE_PALETTES[Math.abs(hash) % REMOTE_PALETTES.length];
+        }
 
-        // リセット機能
+        function addMessage(name, text, type) {
+            chatMessages.push({ name, text, type });
+            renderMessages();
+            saveMessages();
+        }
+
+        function renderMessages() {
+            chatLog.innerHTML = chatMessages.map((m, i) => {
+                let s = MSG_STYLES[m.type] || MSG_STYLES.stt;
+                if (m.type === 'remote') s = getColorForName(m.name);
+                const alignClass = m.type === 'remote' ? 'left' : 'right';
+
+                return `<div class="msg-row ${alignClass}">` +
+                       `<div class="msg-wrapper">` +
+                       `<span class="msg-name" style="color:${s.nameColor};">${escapeHTML(m.name)}</span>` +
+                       `<div class="msg-bubble" data-index="${i}" style="background:${s.bg}; border: 1px solid ${s.border};">` +
+                       `<span class="msg-text">${escapeHTML(m.text)}</span>` +
+                       `</div></div></div>`;
+            }).join('');
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+
+        function saveMessages() { localStorage.setItem('chatMessages', JSON.stringify(chatMessages)); }
+        function messagesToText() { return chatMessages.map(m => `${m.name}： ${m.text}`).join('\n'); }
+
         document.getElementById('clearChatBtn').onclick = () => {
             if(confirm("会話の履歴をすべて消去しますか？")) {
-                chatHistory = '';
-                chatLog.value = '';
-                localStorage.removeItem('chatHistory');
+                chatMessages = []; renderMessages(); localStorage.removeItem('chatMessages');
             }
         };
 
-        // --- 2. 音声合成 (TTS) ---
+        // --- 選択時ポップアップ ---
+        const selectionPopup = document.getElementById('selectionPopup');
+        let tempSelectedText = "";
+
+        chatLog.addEventListener('mouseup', (e) => {
+            const selectedText = window.getSelection().toString().trim();
+            if (selectedText) {
+                tempSelectedText = selectedText;
+                selectionPopup.style.left = (e.pageX - 50) + 'px';
+                selectionPopup.style.top = (e.pageY - 45) + 'px';
+                selectionPopup.style.display = 'block';
+            } else {
+                selectionPopup.style.display = 'none';
+            }
+        });
+
+        document.addEventListener('mousedown', (e) => {
+            if (e.target !== selectionPopup) {
+                setTimeout(() => { if (!window.getSelection().toString().trim()) selectionPopup.style.display = 'none'; }, 10);
+            }
+        });
+
+        selectionPopup.addEventListener('mousedown', (e) => {
+            e.preventDefault(); 
+            if (tempSelectedText) {
+                // ★ 変更: ポップアップの動作を「設定ページを新しいタブで開く」ように変更
+                // URLに文字をくっつけて送ることで、設定ページ側で自動入力させます。
+                const settingsUrl = 'settings.html?addWord=' + encodeURIComponent(tempSelectedText);
+                window.open(settingsUrl, '_blank');
+                selectionPopup.style.display = 'none';
+                window.getSelection().removeAllRanges(); 
+            }
+        });
+
+        // --- 音声合成 (TTS) ---
         const synth = window.speechSynthesis;
-        const voiceSelect = document.getElementById('voiceSelect');
-        let voices = [];
-
-        function populateVoiceList() {
-            voices = synth.getVoices().filter(voice => voice.lang.includes('ja'));
-            voiceSelect.innerHTML = '';
-            const savedVoiceName = localStorage.getItem('ttsVoice'); 
-            let selectedIndex = 0;
-            voices.forEach((voice, i) => {
-                const option = document.createElement('option');
-                option.textContent = voice.name;
-                option.value = i;
-                if (voice.name === savedVoiceName) selectedIndex = i;
-                voiceSelect.appendChild(option);
-            });
-            voiceSelect.value = selectedIndex;
-        }
-        
-        populateVoiceList();
-        if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = populateVoiceList;
-
-        voiceSelect.onchange = () => { if (voices[voiceSelect.value]) localStorage.setItem('ttsVoice', voices[voiceSelect.value].name); };
-        rateSlider.oninput = () => { document.getElementById('rateValue').textContent = rateSlider.value; localStorage.setItem('ttsRate', rateSlider.value); };
-        pitchSlider.oninput = () => { document.getElementById('pitchValue').textContent = pitchSlider.value; localStorage.setItem('ttsPitch', pitchSlider.value); };
+        let speakingQueueCount = 0; 
 
         const speakBtn = document.getElementById('speakBtn');
         const ttsInput = document.getElementById('ttsInput');
@@ -267,100 +505,289 @@
         function speakAndLog() {
             const text = ttsInput.value.trim();
             if (!text) return;
+            if (isMyTyping) waitBtn.click();
 
-            // 読み上げ実行
             const uttr = new SpeechSynthesisUtterance(text);
             uttr.lang = 'ja-JP';
-            const selectedVoice = voices[voiceSelect.value];
-            if (selectedVoice) uttr.voice = selectedVoice;
-            uttr.rate = parseFloat(rateSlider.value);
-            uttr.pitch = parseFloat(pitchSlider.value);
-            synth.speak(uttr);
+            
+            const savedVoiceName = localStorage.getItem('ttsVoice');
+            if (savedVoiceName) {
+                const voices = synth.getVoices().filter(v => v.lang.includes('ja'));
+                const selectedVoice = voices.find(v => v.name === savedVoiceName);
+                if (selectedVoice) uttr.voice = selectedVoice;
+            }
+            
+            uttr.rate = savedTtsRate;
+            uttr.pitch = savedTtsPitch;
 
-            // 履歴に追記
-            chatHistory += "あなた： " + text + "\n\n";
-            chatLog.value = chatHistory;
-            chatLog.scrollTop = chatLog.scrollHeight;
-            localStorage.setItem('chatHistory', chatHistory);
+            const displayName = getMyName() === '名無し' ? 'あなた' : getMyName();
+            addMessage(displayName, text, 'tts');
             ttsInput.value = '';
+            broadcastData(text);
+
+            const msgIndex = chatMessages.length - 1;
+            function getBubbleText() { return chatLog.querySelector(`.msg-bubble[data-index="${msgIndex}"] .msg-text`); }
+
+            uttr.onstart = () => {
+                speakingQueueCount++;
+                const el = getBubbleText();
+                if (el) el.innerHTML = `<span class="tts-highlight-base">${escapeHTML(text)}</span>`;
+            };
+
+            uttr.onboundary = (e) => {
+                if (e.name !== 'word' && e.name !== 'sentence') return;
+                const el = getBubbleText();
+                if (!el) return;
+                const hlStart = e.charIndex;
+                let hlLen = e.charLength;
+                if (!hlLen) {
+                    const remaining = text.slice(hlStart);
+                    const next = remaining.search(/[、。，．！？\s]/);
+                    hlLen = next !== -1 ? next + 1 : remaining.length;
+                }
+                const hlEnd = Math.min(hlStart + hlLen, text.length);
+                el.innerHTML = `<span class="tts-highlight-base">` + escapeHTML(text.slice(0, hlStart)) + `<span class="tts-highlight-word">${escapeHTML(text.slice(hlStart, hlEnd))}</span>` + escapeHTML(text.slice(hlEnd)) + `</span>`;
+            };
+
+            uttr.onend = uttr.onerror = () => {
+                speakingQueueCount--;
+                if (speakingQueueCount <= 0) { speakingQueueCount = 0; renderMessages(); }
+            };
+
+            synth.speak(uttr);
         }
 
         speakBtn.onclick = speakAndLog;
-        ttsInput.addEventListener('keypress', (e) => {
+        ttsInput.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'; });
+        ttsInput.addEventListener('keydown', (e) => {
+            if (e.isComposing || e.keyCode === 229) return;
             if (e.key === 'Enter') {
-                e.preventDefault();
-                speakAndLog();
+                if (!e.shiftKey) {
+                    e.preventDefault(); speakAndLog();
+                    setTimeout(() => ttsInput.style.height = 'auto', 10);
+                }
             }
         });
 
-        // --- 3. 文字起こし (STT) ---
+        // --- 音量メーター ---
+        const volumeMeter = document.getElementById('volumeMeter');
+        let audioContext; let analyser;
+        
+        async function initVolumeMeter() {
+            if (audioContext) return;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                
+                function updateMeter() {
+                    if (!isUserListening) { volumeMeter.style.width = '0%'; requestAnimationFrame(updateMeter); return; }
+                    analyser.getByteFrequencyData(dataArray);
+                    let sum = 0; for(let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                    let average = sum / dataArray.length;
+                    let percent = Math.min(100, (average / 50) * 100);
+                    volumeMeter.style.width = percent + '%';
+                    if (percent > 80) volumeMeter.style.background = '#f44336';
+                    else if (percent > 10) volumeMeter.style.background = '#4caf50';
+                    else volumeMeter.style.background = '#8bc34a';
+                    requestAnimationFrame(updateMeter);
+                }
+                updateMeter();
+            } catch (err) { console.log("マイク音量取得失敗", err); }
+        }
+
+        // --- ★ 追加: YAMNet環境音認識機能の復活 ---
+        const envSoundToggle = document.getElementById('envSoundToggle');
+        const envSoundCaption = document.getElementById('envSoundCaption');
+        let isEnvSoundActive = false; let yamnetModel = null; let envAudioContext = null;
+        let audioProcessor = null; let envStream = null; let lastCaptionTime = 0;
+
+        const yamnetDict = {
+            16: "😄 笑い声", 18: "😢 泣き声", 20: "👶 赤ちゃんの泣き声", 55: "👏 拍手",
+            71: "🐶 犬の鳴き声", 72: "🐶 犬の鳴き声", 78: "🐱 猫の鳴き声", 80: "🐱 猫の鳴き声",
+            300: "🌧️ 雨の音", 318: "⏰ アラーム・警報", 322: "🚨 サイレン", 323: "🚑 救急車のサイレン",
+            324: "🚒 消防車のサイレン", 325: "🚓 パトカーのサイレン", 382: "🪟 ガラスの割れる音",
+            386: "🛎️ チャイム・インターホン", 388: "☎️ 電話の着信音", 393: "⏰ 目覚まし時計",
+            400: "🚪 ドアのノック", 430: "⌨️ タイピング音"
+        };
+
+        envSoundToggle.addEventListener('change', async (e) => {
+            isEnvSoundActive = e.target.checked;
+            if (isEnvSoundActive) {
+                showAudioCaption("⏳ AIモデル読込中...");
+                await startEnvironmentalSoundDetection();
+            } else {
+                stopEnvironmentalSoundDetection();
+            }
+        });
+
+        async function startEnvironmentalSoundDetection() {
+            try {
+                if (!yamnetModel) yamnetModel = await tf.loadGraphModel('https://tfhub.dev/google/tfjs-model/yamnet/tfjs/1', {fromTFHub: true});
+                envStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+                envAudioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                const source = envAudioContext.createMediaStreamSource(envStream);
+                audioProcessor = envAudioContext.createScriptProcessor(2048, 1, 1);
+                source.connect(audioProcessor); audioProcessor.connect(envAudioContext.destination);
+
+                showAudioCaption("✅ 環境音の監視を開始しました");
+                setTimeout(() => { envSoundCaption.style.display = 'none'; }, 3500);
+
+                let audioBuffer = new Float32Array(16000); let bufferIndex = 0; let isPredicting = false;
+
+                audioProcessor.onaudioprocess = (e) => {
+                    if (!isEnvSoundActive || isPredicting) return;
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    for (let i = 0; i < inputData.length; i++) if (bufferIndex < 8192) audioBuffer[bufferIndex++] = inputData[i];
+
+                    if (bufferIndex >= 8192) {
+                        isPredicting = true;
+                        const paddedSamples = new Float32Array(15600);
+                        paddedSamples.set(audioBuffer.slice(0, 8192));
+                        bufferIndex = 0; 
+                        setTimeout(() => {
+                            tf.tidy(() => {
+                                const inputTensor = tf.tensor1d(paddedSamples);
+                                const results = yamnetModel.execute(inputTensor);
+                                const scores = Array.isArray(results) ? results[0] : results;
+                                const maxScoresOverTime = scores.max(0);
+                                const topClass = maxScoresOverTime.argMax().dataSync()[0];
+                                const topScore = maxScoresOverTime.max().dataSync()[0];
+
+                                const now = Date.now();
+                                if (now - lastCaptionTime > 3000) {
+                                    if (topScore > 0.05 && yamnetDict[topClass]) {
+                                        showAudioCaption(`🔔 ${yamnetDict[topClass]}`); lastCaptionTime = now;
+                                    } else if (topScore > 0.05 && [49, 50, 51, 56, 57, 58, 424, 425].includes(topClass)) {
+                                        showAudioCaption(`👏 突発音（拍手・叩く音など）`); lastCaptionTime = now;
+                                    }
+                                }
+                            });
+                            isPredicting = false;
+                        }, 0);
+                    }
+                };
+            } catch (err) { alert("マイクの権限がないか、エラーが発生しました。"); envSoundToggle.checked = false; }
+        }
+
+        function stopEnvironmentalSoundDetection() {
+            if (audioProcessor) { audioProcessor.disconnect(); audioProcessor = null; }
+            if (envAudioContext) { envAudioContext.close(); envAudioContext = null; }
+            if (envStream) { envStream.getTracks().forEach(track => track.stop()); envStream = null; }
+            envSoundCaption.style.display = 'none';
+        }
+
+        function showAudioCaption(text) {
+            envSoundCaption.textContent = text; envSoundCaption.style.display = 'block';
+            envSoundCaption.style.animation = 'none'; envSoundCaption.offsetHeight; 
+            envSoundCaption.style.animation = 'fadeInOut 3s forwards';
+        }
+        // --------------------------------------------------------
+        // --- 文字起こし (STT) ---
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
         const sttInterim = document.getElementById('sttInterim');
 
-        let recognition;
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.lang = 'ja-JP';
-            recognition.continuous = true;
-            recognition.interimResults = true;
+        let isUserListening = false; let isApiActive = false; let restartTimer = null; let recognition = null;
 
-            recognition.onresult = (event) => {
-                let interimTranscript = '';
-                let newFinal = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        newFinal += event.results[i][0].transcript + '．\n\n';
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
+        if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+            chatLog.innerText = "ブラウザが音声認識非対応です。"; startBtn.disabled = true;
+        } else {
+            function buildRecognition() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                const rec = new SpeechRecognition();
+                rec.lang = 'ja-JP'; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1;
+
+                rec.onstart = () => { isApiActive = true; clearTimeout(restartTimer); restartTimer = null; };
+
+                rec.onresult = (event) => {
+                    let interimTranscript = ''; let newFinal = '';
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) newFinal += event.results[i][0].transcript + '．\n\n';
+                        else interimTranscript += event.results[i][0].transcript;
                     }
-                }
-                
-                newFinal = applyDictionary(newFinal);
-                interimTranscript = applyDictionary(interimTranscript);
-                
-                // 確定した言葉があれば履歴に追記
-                if (newFinal) {
-                    chatHistory += "相手： " + newFinal;
-                    chatLog.value = chatHistory;
-                    localStorage.setItem('chatHistory', chatHistory);
-                }
 
-                // 認識中の言葉を専用エリアに表示
-                if (interimTranscript) {
-                    sttInterim.textContent = "👂 相手（聞き取り中...）： " + interimTranscript;
-                } else {
-                    sttInterim.textContent = "";
-                }
-                
-                // 手動修正中（ノートにカーソルがある時）は勝手にスクロールしない
-                const isFocused = (document.activeElement === chatLog);
-                if (!isFocused && (newFinal || interimTranscript)) {
-                    chatLog.scrollTop = chatLog.scrollHeight;
-                }
-            };
+                    newFinal = applyDictionary(newFinal);
+                    interimTranscript = applyDictionary(interimTranscript);
 
-            recognition.onend = () => {
-                if (stopBtn.style.display === 'inline-block') recognition.start();
-            };
+                    const cleanedFinal = newFinal.replace(/[．。、，\s]+/g, '').trim();
+                    if (newFinal && cleanedFinal.length > 0) {
+                        const sttName = getMyName() === '名無し' ? 'あなた' : getMyName();
+                        if (speakingQueueCount === 0) addMessage(sttName, newFinal.trim(), 'tts');
+                        broadcastData(newFinal);
+                    }
+
+                    sttInterim.textContent = interimTranscript ? "👂 聞き取り中...： " + interimTranscript : "";
+                    const isFocused = (document.activeElement === chatLog);
+                    if (!isFocused && (newFinal || interimTranscript)) chatLog.scrollTop = chatLog.scrollHeight;
+                };
+
+                rec.onerror = (event) => {
+                    isApiActive = false;
+                    if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                        isUserListening = false; startBtn.style.display = 'inline-block'; stopBtn.style.display = 'none';
+                        alert("マイクの使用が許可されていません。"); return;
+                    }
+                    if (event.error === 'aborted') return;
+                    scheduleRestart((event.error === 'audio-capture') ? 1000 : 250);
+                };
+
+                rec.onend = () => {
+                    isApiActive = false;
+                    if (!isUserListening) return;
+                    scheduleRestart(isAndroid ? 250 : 600);
+                };
+
+                return rec;
+            }
+
+            function scheduleRestart(delay = 600) {
+                if (!isUserListening || restartTimer !== null) return;
+                restartTimer = setTimeout(() => {
+                    restartTimer = null;
+                    if (!isUserListening || isApiActive) return;
+                    recognition = buildRecognition();
+                    try { recognition.start(); } catch(e) { scheduleRestart(1500); }
+                }, delay);
+            }
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible' && isUserListening && !isApiActive) scheduleRestart(800);
+            });
 
             startBtn.onclick = () => {
-                recognition.start();
-                startBtn.style.display = 'none';
-                stopBtn.style.display = 'inline-block';
+                isUserListening = true;
+                if (!isAndroid) initVolumeMeter(); 
+                recognition = buildRecognition(); 
+                try { recognition.start(); } catch(e) { scheduleRestart(); }
+                startBtn.style.display = 'none'; stopBtn.style.display = 'inline-block';
             };
 
             stopBtn.onclick = () => {
-                recognition.stop();
-                sttInterim.textContent = "";
-                startBtn.style.display = 'inline-block';
-                stopBtn.style.display = 'none';
+                isUserListening = false; clearTimeout(restartTimer); restartTimer = null;
+                if (recognition) { try { recognition.stop(); } catch(e) {} recognition = null; }
+                sttInterim.textContent = ""; startBtn.style.display = 'inline-block'; stopBtn.style.display = 'none';
             };
-        } else {
-            chatLog.value = "お使いのブラウザは音声認識に対応していません．ChromeやEdgeをご利用ください．\n\n" + chatHistory;
-            startBtn.disabled = true;
         }
+
+        // --- エクスポート ---
+        document.getElementById('copyChatBtn').onclick = () => {
+            if (!chatMessages.length) { alert("コピーする履歴がありません。"); return; }
+            navigator.clipboard.writeText(messagesToText()).then(() => alert("コピーしました！")).catch(() => alert("コピー失敗。"));
+        };
+
+        document.getElementById('downloadChatBtn').onclick = () => {
+            if (!chatMessages.length) { alert("保存する履歴がありません。"); return; }
+            const blob = new Blob([messagesToText()], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const date = new Date();
+            const filename = `会話記録_${date.getFullYear()}${String(date.getMonth()+1).padStart(2,'0')}${String(date.getDate()).padStart(2,'0')}_${String(date.getHours()).padStart(2,'0')}${String(date.getMinutes()).padStart(2,'0')}.txt`;
+            const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        };
     </script>
 </body>
 </html>

@@ -1,0 +1,235 @@
+<!-- 設定のページ -->
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>設定・辞書パネル</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        h1 { font-size: 1.3rem; margin-top: 0; margin-bottom: 20px; color: #2c3e50; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; }
+        
+        .settings-container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); max-width: 600px; margin: 0 auto; }
+        
+        .info-box { background-color: #e3f2fd; color: #0d47a1; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9em; border: 1px solid #bbdefb; }
+        
+        .section-title { font-size: 1.1rem; font-weight: bold; color: #0d6efd; margin-top: 25px; margin-bottom: 15px; }
+        
+        .settings-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 20px; }
+        .settings-item label { font-size: 0.95rem; font-weight: bold; display: block; margin-bottom: 8px; }
+        
+        input[type="range"] { width: 100%; margin-top: 10px; }
+        select, input[type="text"] { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 1em; }
+        
+        button { background-color: #0d6efd; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 1em; font-weight: bold; transition: background-color 0.2s; white-space: nowrap; }
+        button:hover { background-color: #0b5ed7; }
+        
+        .font-btn { background-color: #e9ecef; color: #333; padding: 8px 15px; margin-right: 5px; }
+        .font-btn:hover { background-color: #dde2e6; }
+        
+        .dict-input-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px; }
+        .dict-input-row input { flex: 1; min-width: 120px; }
+        .dict-list { list-style: none; padding: 0; margin-top: 10px; border: 1px solid #eee; border-radius: 8px; overflow: hidden; }
+        .dict-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid #eee; font-size: 0.95em; background: white;}
+        .dict-item:nth-child(even) { background-color: #fafafa; }
+        .dict-item:last-child { border-bottom: none; }
+        .dict-delete-btn { background-color: #dc3545; padding: 6px 12px; font-size: 0.85em; border-radius: 6px; }
+        .dict-delete-btn:hover { background-color: #c82333; }
+        
+        /* 環境音トグルデザイン */
+        .toggle-switch-label { display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer; }
+        .toggle-switch-label input[type="checkbox"] { transform: scale(1.3); cursor: pointer; }
+        
+        /* 完了メッセージ */
+        #saveToast { display: none; background-color: #198754; color: white; text-align: center; padding: 10px; border-radius: 6px; margin-bottom: 20px; font-weight: bold; animation: fadeOut 3s forwards;}
+        @keyframes fadeOut { 0% {opacity: 1;} 70% {opacity: 1;} 100% {opacity: 0; display: none;} }
+    </style>
+</head>
+<body>
+    <div class="settings-container">
+        <h1>⚙️ 設定・辞書</h1>
+        
+        <div id="saveToast">✅ 設定を保存しました（メイン画面に自動で反映されます）</div>
+
+        <div class="info-box">
+            <b>💡 使い方：</b> ここで変更した設定は、メインの会話画面にリアルタイムで自動的に反映されます。<br>
+            ※環境音認識（AI）は今後のアップデートでメイン画面の通信パネル付近に移動する予定のため、現在は設定項目から外しています。
+        </div>
+
+        <div class="section-title">文字と音声の調整</div>
+        <div class="settings-grid">
+            <div class="settings-item">
+                <label>🔠 アプリの文字サイズ</label>
+                <div>
+                    <button class="font-btn" onclick="changeFontSize(2)">＋ 大きくする</button>
+                    <button class="font-btn" onclick="changeFontSize(-2)">－ 小さくする</button>
+                    <span style="margin-left: 10px; color: #666;">現在のサイズ: <span id="currentFontSizeDisplay">16</span>px</span>
+                </div>
+            </div>
+
+            <div class="settings-item">
+                <label for="voiceSelect">👤 読み上げの声の種類</label>
+                <select id="voiceSelect"></select>
+            </div>
+
+            <div class="settings-item">
+                <label for="rateSlider">🏃 読み上げの速度: <span id="rateValue">1.0</span></label>
+                <input type="range" id="rateSlider" min="0.5" max="2" value="1" step="0.1">
+            </div>
+
+            <div class="settings-item">
+                <label for="pitchSlider">🎵 読み上げの高さ: <span id="pitchValue">1.0</span></label>
+                <input type="range" id="pitchSlider" min="0" max="2" value="1" step="0.1">
+            </div>
+        </div>
+
+        <div class="section-title">📖 ユーザー辞書</div>
+        <div style="font-size: 0.9em; color: #666; margin-bottom: 10px;">
+            AIが聞き間違えやすい言葉（専門用語や人名など）を登録してください。
+        </div>
+        <div class="dict-input-row">
+            <input type="text" id="dictWrong" placeholder="誤認識される言葉 (例: ヤマネット)">
+            <input type="text" id="dictCorrect" placeholder="正しい言葉 (例: YAMNet)">
+            <button id="addDictBtn">追加</button>
+        </div>
+        <ul id="dictList" class="dict-list"></ul>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <button style="background-color: #6c757d;" onclick="window.close()">✖️ このタブを閉じる</button>
+        </div>
+    </div>
+
+    <script>
+        // --- トースト通知 ---
+        function showSaveToast() {
+            const toast = document.getElementById('saveToast');
+            toast.style.display = 'block';
+            toast.style.animation = 'none';
+            toast.offsetHeight; 
+            toast.style.animation = 'fadeOut 3s forwards';
+        }
+
+        // --- フォントサイズ ---
+        let currentFontSize = parseInt(localStorage.getItem('appFontSize')) || 16;
+        document.getElementById('currentFontSizeDisplay').textContent = currentFontSize;
+        function changeFontSize(change) {
+            currentFontSize += change;
+            if(currentFontSize < 12) currentFontSize = 12;
+            if(currentFontSize > 32) currentFontSize = 32;
+            localStorage.setItem('appFontSize', currentFontSize);
+            document.getElementById('currentFontSizeDisplay').textContent = currentFontSize;
+            showSaveToast();
+        }
+
+        // --- 音声設定 ---
+        const synth = window.speechSynthesis;
+        const voiceSelect = document.getElementById('voiceSelect');
+        const rateSlider = document.getElementById('rateSlider');
+        const pitchSlider = document.getElementById('pitchSlider');
+        let voices = [];
+
+        function populateVoiceList() {
+            voices = synth.getVoices().filter(voice => voice.lang.includes('ja'));
+            voiceSelect.innerHTML = '';
+            const savedVoiceName = localStorage.getItem('ttsVoice'); 
+            let selectedIndex = 0;
+            voices.forEach((voice, i) => {
+                const option = document.createElement('option');
+                option.textContent = voice.name;
+                option.value = i;
+                if (voice.name === savedVoiceName) selectedIndex = i;
+                voiceSelect.appendChild(option);
+            });
+            if (voices.length > 0) voiceSelect.value = selectedIndex;
+        }
+        
+        populateVoiceList();
+        if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = populateVoiceList;
+
+        voiceSelect.onchange = () => { 
+            if (voices[voiceSelect.value]) {
+                localStorage.setItem('ttsVoice', voices[voiceSelect.value].name); 
+                showSaveToast();
+            }
+        };
+
+        if(localStorage.getItem('ttsRate')) {
+            rateSlider.value = localStorage.getItem('ttsRate');
+            document.getElementById('rateValue').textContent = rateSlider.value;
+        }
+        rateSlider.oninput = () => { 
+            document.getElementById('rateValue').textContent = rateSlider.value; 
+            localStorage.setItem('ttsRate', rateSlider.value); 
+        };
+        rateSlider.onchange = showSaveToast;
+
+        if(localStorage.getItem('ttsPitch')) {
+            pitchSlider.value = localStorage.getItem('ttsPitch');
+            document.getElementById('pitchValue').textContent = pitchSlider.value;
+        }
+        pitchSlider.oninput = () => { 
+            document.getElementById('pitchValue').textContent = pitchSlider.value; 
+            localStorage.setItem('ttsPitch', pitchSlider.value); 
+        };
+        pitchSlider.onchange = showSaveToast;
+
+
+        // --- 辞書機能 ---
+        let customDictionary = JSON.parse(localStorage.getItem('userDictionary')) || {};
+        const dictWrong = document.getElementById('dictWrong');
+        const dictCorrect = document.getElementById('dictCorrect');
+        const dictList = document.getElementById('dictList');
+
+        function renderDictionary() {
+            dictList.innerHTML = '';
+            for (const [wrong, correct] of Object.entries(customDictionary)) {
+                const li = document.createElement('li');
+                li.className = 'dict-item';
+                li.innerHTML = `<span><b>${wrong}</b> ➔ ${correct}</span> <button class="dict-delete-btn" onclick="deleteDictWord('${wrong}')">削除</button>`;
+                dictList.appendChild(li);
+            }
+            if(Object.keys(customDictionary).length === 0) {
+                dictList.innerHTML = '<li class="dict-item" style="color: #999; justify-content: center;">登録されている単語はありません</li>';
+            }
+        }
+
+        document.getElementById('addDictBtn').onclick = () => {
+            const w = dictWrong.value.trim();
+            const c = dictCorrect.value.trim();
+            if (w && c) {
+                customDictionary[w] = c;
+                localStorage.setItem('userDictionary', JSON.stringify(customDictionary));
+                renderDictionary();
+                dictWrong.value = '';
+                dictCorrect.value = '';
+                showSaveToast();
+            }
+        };
+
+        dictCorrect.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); document.getElementById('addDictBtn').click(); }
+        });
+
+        window.deleteDictWord = (wrong) => {
+            delete customDictionary[wrong];
+            localStorage.setItem('userDictionary', JSON.stringify(customDictionary));
+            renderDictionary();
+            showSaveToast();
+        };
+
+        renderDictionary();
+
+        // --- メイン画面から単語を渡された場合の処理 ---
+        // URLの ?addWord=〇〇 を読み取って、入力欄に自動で入れる
+        const urlParams = new URLSearchParams(window.location.search);
+        const wordToAdd = urlParams.get('addWord');
+        if (wordToAdd) {
+            dictWrong.value = wordToAdd;
+            dictCorrect.focus();
+            // URLからクエリパラメータを消してスッキリさせる（リロード時の再追加防止）
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    </script>
+</body>
+</html>
