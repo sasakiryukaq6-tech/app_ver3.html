@@ -13,7 +13,7 @@
         .header { display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; margin-bottom: 10px; }
         /* ★ 変更: 通信パネルのデザイン（PCでは左側に幅を固定して表示） */
         /* ★ 変更: 通信パネルの幅を細く（240px）してスリム化 */
-        .sync-panel { background: #e3f2fd; padding: 10px 12px; border-radius: 8px; border: 1px solid #bbdefb; flex-shrink: 0; width: 220px; box-sizing: border-box; overflow-y: auto; max-height: 100%; }
+        .sync-panel { background: #e3f2fd; padding: 10px 12px; border-radius: 8px; border: 1px solid #bbdefb; flex-shrink: 0; width: 230px; box-sizing: border-box; overflow-y: auto; max-height: 100%; }
         .sync-id { font-weight: bold; font-size: 1.1em; letter-spacing: 1px; color: #1565c0; user-select: all; cursor: pointer; }
         h1 { font-size: 1.3rem; margin: 0; color: #2c3e50; }
         
@@ -31,7 +31,7 @@
             border: 1px solid #ced4da; border-radius: 6px; font-size: 1em; 
             background-color: #f0f4f8; transition: border-color 0.2s; line-height: 1.4; 
             overflow-y: auto; cursor: text;
-            display: flex; flex-direction: column; gap: 4px;
+            display: flex; flex-direction: column; gap: 8px;
         }
         .chat-textarea:focus { outline: none; border-color: #0d6efd; background-color: #fff; }
         .chat-textarea:empty:before { content: attr(data-placeholder); color: #999; pointer-events: none; }
