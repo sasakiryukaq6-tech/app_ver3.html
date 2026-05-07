@@ -1,7 +1,4 @@
-<!-- ver15-2 -->
-
-<!-- PCでは通信設定パネルが画面左側に
- （横幅が狭いと上に） -->
+<!-- 同じ人物の吹き出しが続く場合，名前の表示を省略する -->
 
 <!DOCTYPE html>
 <html lang="ja">
@@ -10,13 +7,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>総合コミュニケーション支援ツール (Web版)</title>
     <style>
-        :root { --font-size: 16px; }
-        body { font-family: sans-serif; background-color: #f4f7f6; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; margin: 0; padding: 10px; font-size: var(--font-size); color: #333; display: flex; flex-direction: column; height: 100dvh; box-sizing: border-box; overflow: hidden; }
+        :root { --font-size: 14px; }
+        body { font-family: sans-serif; background-color: #f4f7f6; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; margin: 0; padding: 6px; font-size: var(--font-size); color: #333; display: flex; flex-direction: column; height: 100dvh; box-sizing: border-box; overflow: hidden; }
         
         .header { display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; margin-bottom: 10px; }
         /* ★ 変更: 通信パネルのデザイン（PCでは左側に幅を固定して表示） */
         /* ★ 変更: 通信パネルの幅を細く（240px）してスリム化 */
-        .sync-panel { background: #e3f2fd; padding: 10px 15px; border-radius: 8px; border: 1px solid #bbdefb; flex-shrink: 0; width: 240px; box-sizing: border-box; overflow-y: auto; max-height: 100%; }        .sync-id { font-weight: bold; font-size: 1.1em; letter-spacing: 1px; color: #1565c0; user-select: all; cursor: pointer; }
+        .sync-panel { background: #e3f2fd; padding: 10px 12px; border-radius: 8px; border: 1px solid #bbdefb; flex-shrink: 0; width: 220px; box-sizing: border-box; overflow-y: auto; max-height: 100%; }
+        .sync-id { font-weight: bold; font-size: 1.1em; letter-spacing: 1px; color: #1565c0; user-select: all; cursor: pointer; }
         h1 { font-size: 1.3rem; margin: 0; color: #2c3e50; }
         
         .invite-btn { background-color: #6c757d; padding: 4px 8px; font-size: 0.85em; margin-left: 5px; color: white; border: none; border-radius: 4px; cursor: pointer; }
@@ -24,7 +22,7 @@
         #qrContainer { display: none; width: 100%; margin-top: 10px; padding: 15px; background: white; border-radius: 8px; text-align: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
         #qrcode { display: inline-block; margin-top: 10px; padding: 10px; background: white; border: 1px solid #eee; border-radius: 8px; }
 
-        .chat-container { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
+        .chat-container { background: white; padding: 13px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
         .chat-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 8px; margin-bottom: 10px; flex-shrink: 0; flex-wrap: wrap; gap: 5px;}
         h2 { font-size: 1.1rem; margin: 0; }
         
@@ -33,7 +31,7 @@
             border: 1px solid #ced4da; border-radius: 6px; font-size: 1em; 
             background-color: #f0f4f8; transition: border-color 0.2s; line-height: 1.4; 
             overflow-y: auto; cursor: text;
-            display: flex; flex-direction: column; gap: 12px;
+            display: flex; flex-direction: column; gap: 4px;
         }
         .chat-textarea:focus { outline: none; border-color: #0d6efd; background-color: #fff; }
         .chat-textarea:empty:before { content: attr(data-placeholder); color: #999; pointer-events: none; }
@@ -62,10 +60,22 @@
         }
         
         input[type="text"], select { box-sizing: border-box; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 1em; }
-        button { background-color: #0d6efd; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 1em; font-weight: bold; transition: background-color 0.2s; white-space: nowrap; }
+        button { background-color: #0d6efd; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 1em; font-weight: bold; transition: background-color 0.2s; white-space: nowrap; }
         button:hover { background-color: #0b5ed7; }
         .stop-btn { background-color: #dc3545; }
         .stop-btn:hover { background-color: #c82333; }
+        /* ★ 追加: 聞き取り中（マイクオン）状態のボタンデザイン */
+        .listening-active {
+            background-color: #e8f5e9 !important;
+            color: #2e7d32 !important;
+            border: 2px solid #4caf50 !important;
+            animation: pulse-light 1.5s infinite;
+        }
+        @keyframes pulse-light {
+            0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+        }
         .clear-btn { background-color: #6c757d; padding: 6px 12px; font-size: 0.85em; }
         .clear-btn:hover { background-color: #5a6268; }
         .action-btn { background-color: #198754; padding: 6px 12px; font-size: 0.85em; }
@@ -80,8 +90,8 @@
         @media (max-width: 500px) {
             h1 { font-size: 1.1rem; }
             button { padding: 10px 12px; }
-            .header { flex-direction: column; align-items: flex-start; gap: 5px; }
-            .header > div { align-self: flex-end; }
+            /* ★ 変更: スマホ環境でもヘッダーを横並びに保つように修正 */
+            .header { flex-direction: row; align-items: center; justify-content: space-between; }
             .chat-textarea { line-height: 1.35; }
         }
 
@@ -95,7 +105,7 @@
         .msg-row.right .msg-wrapper { align-items: flex-end; }
         .msg-row.left .msg-wrapper { align-items: flex-start; }
         .msg-name { font-size: 0.75em; color: #666; margin-bottom: 4px; font-weight: bold; }
-        .msg-bubble { padding: 8px 14px; border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
+        .msg-bubble { padding: 6px 10px; border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
         .msg-row.right .msg-bubble { border-top-right-radius: 2px; }
         .msg-row.left .msg-bubble { border-top-left-radius: 2px; }
         .msg-text { white-space: pre-wrap; word-wrap: break-word; display: block; color: #333; }
@@ -115,6 +125,16 @@
             width: 100%;
         }
 
+        /* ★ 追加: 通信状況テキストの基本デザイン（PCの細いパネル用＝改行する） */
+        #syncStatusSummary {
+            display: block;
+            font-size: 0.85em;
+            font-weight: normal;
+            color: #555;
+            margin-top: 4px;
+            padding-left: 28px;
+        }
+
         /* 画面幅が768px以下のスマホ・タブレット向けの設定 */
         @media (max-width: 768px) {
             .main-wrapper {
@@ -124,6 +144,13 @@
             .sync-panel {
                 width: 100%; /* スマホでは横幅いっぱいにする */
                 height: auto;
+            }
+            
+            /* ★ 追加: スマホの時は横幅に余裕があるため、横並び（inline）に戻す */
+            #syncStatusSummary {
+                display: inline;
+                margin-top: 0;
+                padding-left: 8px;
             }
         }
 
@@ -146,10 +173,10 @@
 
         <!-- ★ 変更: (オフライン)を改行し、入力欄などを細いパネルに合わせて縦並びに最適化 -->
         <details class="sync-panel">
+            <!-- ★ 変更: スタイル指定をCSSに移動するため、HTMLをシンプルに -->
             <summary class="sync-summary" style="line-height: 1.4;">
                 📡 通信・招待機能を開く 
-                <!-- ★ 追加: display: block を使って下に落とし、少し字下げ(padding-left)する -->
-                <span id="syncStatusSummary" style="display: block; font-size: 0.85em; font-weight: normal; color: #555; margin-top: 4px; padding-left: 28px;">(オフライン)</span>
+                <span id="syncStatusSummary">（オフライン）</span>
             </summary>
             <div style="margin-top: 15px; border-top: 1px dashed #bbdefb; padding-top: 15px;">
                 
@@ -219,8 +246,36 @@
     <!-- ★ 追加: ここで箱（ラッパー）を閉じる -->
 
     <script>
+        // ★ Androidかどうかを判定
         const isAndroid = /Android/i.test(navigator.userAgent);
+
+        // --- ★ 追加: Androidの「ピコン音(no-speech)」防止用の無音オシレーター ---
+        let silentAudioCtx = null;
+        function startSilentAudio() {
+            if (!isAndroid) return;
+            if (silentAudioCtx) return; // 既に動いていれば何もしない
+            
+            try {
+                silentAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = silentAudioCtx.createOscillator();
+                const gain = silentAudioCtx.createGain();
+                gain.gain.value = 0.0001; // 人間には聞こえない極小の音量
+                oscillator.connect(gain);
+                gain.connect(silentAudioCtx.destination);
+                oscillator.start();
+            } catch(e) {
+                console.log("無音オーディオの開始に失敗:", e);
+            }
+        }
         
+        function stopSilentAudio() {
+            if (silentAudioCtx) {
+                silentAudioCtx.close();
+                silentAudioCtx = null;
+            }
+        }
+        // ------------------------------------------------------------------------
+                
         // ★ 追加: 定期的に設定データ（フォントや辞書）を読み込み直す処理
         // 別タブで設定が変更された時に、リアルタイムで反映させるための仕掛けです。
         let customDictionary = JSON.parse(localStorage.getItem('userDictionary')) || {};
@@ -258,6 +313,9 @@
         let typingTimeout = null;
         const waitBtn = document.getElementById('waitBtn');
         const typingIndicator = document.getElementById('typingIndicator');
+
+        // ★ 追加: 自分がホスト（部屋の作成者）かどうかを判定するフラグ
+        let isRoomHost = true;
 
         waitBtn.onclick = () => {
             isMyTyping = !isMyTyping;
@@ -327,6 +385,7 @@
                 };
 
                 if (inviteId && inviteId !== id) {
+                    isRoomHost = false; // ★ 追加: 招待URLから入った人は「ゲスト」になる
                     document.getElementById('targetPeerId').value = inviteId;
                     setTimeout(() => document.getElementById('connectBtn').click(), 800);
                 }
@@ -338,17 +397,29 @@
         document.getElementById('connectBtn').onclick = () => {
             const targetId = document.getElementById('targetPeerId').value.trim();
             if (!targetId) return;
+            isRoomHost = false; // ★ 追加: 自分からIDを入力して繋ぎに行く人は「ゲスト」になる
             const conn = peer.connect(targetId);
             setupConnection(conn);
         };
 
         function setupConnection(conn) {
             conn.on('open', () => {
-                connections.push(conn);
-                document.getElementById('syncStatus').textContent = `✅ 接続完了 (${connections.length}台と通信中)`;
-                document.getElementById('syncStatusSummary').textContent = `(✅ ${connections.length}台と通信中)`;
+                // 同じ接続が重複して登録されるのを防ぐ安全対策
+                if (!connections.includes(conn)) connections.push(conn);
+                document.getElementById('syncStatus').textContent = `✅ 接続完了（${connections.length}台と通信中）`;
+                document.getElementById('syncStatusSummary').textContent = `（✅ ${connections.length}台と通信中）`;
                 document.getElementById('targetPeerId').value = '';
-                if (chatMessages.length > 0) conn.send({ type: 'history', messages: chatMessages });
+                
+                // ★ 変更: 接続直後は通信が不安定なため、0.4秒待ってから確実に履歴のキャッチボールを行う
+                setTimeout(() => {
+                    if (isRoomHost) {
+                        // 自分がホストなら、自分の履歴を相手に送る
+                        conn.send({ type: 'history', messages: chatMessages, isHost: true });
+                    } else {
+                        // 自分がゲストなら、ホストに「履歴をください」と要求する
+                        conn.send({ type: 'request_history' });
+                    }
+                }, 400);
             });
 
             conn.on('data', (data) => {
@@ -357,10 +428,17 @@
                     addMessage(senderName, data.text.trim(), 'remote');
                     connections.forEach(c => { if (c !== conn && c.open) c.send(data); });
                 }
+                else if (data.type === 'request_history') {
+                    // ★ 追加: ゲストから「履歴をください」と言われたら、ホストとして履歴を送り返す
+                    if (isRoomHost) {
+                        conn.send({ type: 'history', messages: chatMessages, isHost: true });
+                    }
+                }
                 else if (data.type === 'history') {
-                    if (data.messages && data.messages.length > chatMessages.length) {
+                    if (data.isHost) {
                         const myCurrentName = getMyName() === '名無し' ? 'あなた' : getMyName();
-                        chatMessages = data.messages.map(m => {
+                        // 相手(ホスト)の履歴で完全に上書きする
+                        chatMessages = (data.messages || []).map(m => {
                             if (m.name !== myCurrentName) return { name: m.name, text: m.text, type: 'remote' };
                             return m; 
                         });
@@ -384,9 +462,9 @@
 
             conn.on('close', () => {
                 connections = connections.filter(c => c !== conn);
-                const st = connections.length > 0 ? `✅ 接続完了 (${connections.length}台と通信中)` : `現在オフラインです（1人で使用中）`;
+                const st = connections.length > 0 ? `✅ 接続完了（${connections.length}台と通信中）` : `現在オフラインです（1人で使用中）`;
                 document.getElementById('syncStatus').textContent = st;
-                document.getElementById('syncStatusSummary').textContent = connections.length > 0 ? `(✅ ${connections.length}台と通信中)` : `(オフライン)`;
+                document.getElementById('syncStatusSummary').textContent = connections.length > 0 ? `（✅ ${connections.length}台と通信中）` : `（オフライン）`;
             });
         }
 
@@ -442,9 +520,15 @@
                 if (m.type === 'remote') s = getColorForName(m.name);
                 const alignClass = m.type === 'remote' ? 'left' : 'right';
 
+                // ★ 追加: 1つ前のメッセージと同じ送信者かどうかを判定
+                const isSameSender = i > 0 && chatMessages[i - 1].name === m.name && chatMessages[i - 1].type === m.type;
+                
+                // ★ 変更: 同じ送信者の場合は名前のHTMLを出力しないようにする
+                const nameHtml = isSameSender ? '' : `<span class="msg-name" style="color:${s.nameColor};">${escapeHTML(m.name)}</span>`;
+
                 return `<div class="msg-row ${alignClass}">` +
                        `<div class="msg-wrapper">` +
-                       `<span class="msg-name" style="color:${s.nameColor};">${escapeHTML(m.name)}</span>` +
+                       nameHtml +
                        `<div class="msg-bubble" data-index="${i}" style="background:${s.bg}; border: 1px solid ${s.border};">` +
                        `<span class="msg-text">${escapeHTML(m.text)}</span>` +
                        `</div></div></div>`;
@@ -502,60 +586,104 @@
         const speakBtn = document.getElementById('speakBtn');
         const ttsInput = document.getElementById('ttsInput');
 
+        // --- ★ 変更: onboundaryに依存せず、句読点ごとに分割して確実なハイライトを行う仕組み ---
         function speakAndLog() {
-            const text = ttsInput.value.trim();
-            if (!text) return;
+            const rawText = ttsInput.value.trim();
+            if (!rawText) return;
             if (isMyTyping) waitBtn.click();
 
-            const uttr = new SpeechSynthesisUtterance(text);
-            uttr.lang = 'ja-JP';
-            
-            const savedVoiceName = localStorage.getItem('ttsVoice');
-            if (savedVoiceName) {
-                const voices = synth.getVoices().filter(v => v.lang.includes('ja'));
-                const selectedVoice = voices.find(v => v.name === savedVoiceName);
-                if (selectedVoice) uttr.voice = selectedVoice;
-            }
-            
-            uttr.rate = savedTtsRate;
-            uttr.pitch = savedTtsPitch;
-
+            // まずチャットログにメッセージを追加
             const displayName = getMyName() === '名無し' ? 'あなた' : getMyName();
-            addMessage(displayName, text, 'tts');
+            addMessage(displayName, rawText, 'tts');
             ttsInput.value = '';
-            broadcastData(text);
+            broadcastData(rawText);
 
             const msgIndex = chatMessages.length - 1;
             function getBubbleText() { return chatLog.querySelector(`.msg-bubble[data-index="${msgIndex}"] .msg-text`); }
 
-            uttr.onstart = () => {
-                speakingQueueCount++;
-                const el = getBubbleText();
-                if (el) el.innerHTML = `<span class="tts-highlight-base">${escapeHTML(text)}</span>`;
-            };
-
-            uttr.onboundary = (e) => {
-                if (e.name !== 'word' && e.name !== 'sentence') return;
-                const el = getBubbleText();
-                if (!el) return;
-                const hlStart = e.charIndex;
-                let hlLen = e.charLength;
-                if (!hlLen) {
-                    const remaining = text.slice(hlStart);
-                    const next = remaining.search(/[、。，．！？\s]/);
-                    hlLen = next !== -1 ? next + 1 : remaining.length;
+            // ★ 変更1: 句読点だけでなく、長すぎる文は強制的に細かく分割して確実にハイライトを動かす
+            let chunks = [];
+            const tempChunks = rawText.match(/.*?[、。，．！？\n\s]+|.+/g) || [rawText];
+            tempChunks.forEach(c => {
+                // 分割の基準を15文字から25文字に緩める
+                if (c.length > 25) {
+                    for (let i = 0; i < c.length; i += 25) {
+                        let part = c.slice(i, i + 25);
+                        // もし分割された結果が「。」などの記号だけになってしまったら、1つ前の塊に吸収させる
+                        if (part.match(/^[、。，．！？\n\s]+$/) && chunks.length > 0) {
+                            chunks[chunks.length - 1] += part;
+                        } else {
+                            chunks.push(part);
+                        }
+                    }
+                } else {
+                    chunks.push(c);
                 }
-                const hlEnd = Math.min(hlStart + hlLen, text.length);
-                el.innerHTML = `<span class="tts-highlight-base">` + escapeHTML(text.slice(0, hlStart)) + `<span class="tts-highlight-word">${escapeHTML(text.slice(hlStart, hlEnd))}</span>` + escapeHTML(text.slice(hlEnd)) + `</span>`;
-            };
+            });
+            
+            let currentIndex = 0;
+            let charOffset = 0; // 読み上げ済みの文字数
+            let fallbackTimer = null; // スマホ特有の「止まるバグ」対策タイマー
 
-            uttr.onend = uttr.onerror = () => {
-                speakingQueueCount--;
-                if (speakingQueueCount <= 0) { speakingQueueCount = 0; renderMessages(); }
-            };
+            function speakNextChunk() {
+                if (currentIndex >= chunks.length) {
+                    speakingQueueCount--;
+                    if (speakingQueueCount <= 0) { speakingQueueCount = 0; renderMessages(); } // ハイライト解除
+                    return;
+                }
 
-            synth.speak(uttr);
+                const chunk = chunks[currentIndex];
+                const uttr = new SpeechSynthesisUtterance(chunk);
+                uttr.lang = 'ja-JP';
+                
+                const savedVoiceName = localStorage.getItem('ttsVoice');
+                if (savedVoiceName) {
+                    const voices = synth.getVoices().filter(v => v.lang.includes('ja'));
+                    const selectedVoice = voices.find(v => v.name === savedVoiceName);
+                    if (selectedVoice) uttr.voice = selectedVoice;
+                }
+                
+                uttr.rate = savedTtsRate;
+                uttr.pitch = savedTtsPitch;
+
+                // 次のフレーズへ進む処理（重複実行を防ぐ）
+                function proceedNext() {
+                    if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
+                    uttr.onend = null; uttr.onerror = null; 
+                    charOffset += chunk.length;
+                    currentIndex++;
+                    speakNextChunk();
+                }
+
+                // 読み上げ開始時の処理
+                uttr.onstart = () => {
+                    if (currentIndex === 0) speakingQueueCount++;
+                    const el = getBubbleText();
+                    if (!el) return;
+
+                    const hlStart = charOffset;
+                    const hlEnd = charOffset + chunk.length;
+
+                    // ★ 変更2: 全体を薄黄色にするのをやめ、読んでいる箇所「だけ」をハイライトする
+                    el.innerHTML = escapeHTML(rawText.slice(0, hlStart)) + 
+                        `<span class="tts-highlight-word">${escapeHTML(rawText.slice(hlStart, hlEnd))}</span>` + 
+                        escapeHTML(rawText.slice(hlEnd));
+
+                    // ★ 変更3: スマホで音声が止まったままになるバグを防ぐため、文字数に応じた時間で強制的に次へ進める
+                    const estimatedTime = (chunk.length * 300 / savedTtsRate) + 600;
+                    fallbackTimer = setTimeout(proceedNext, estimatedTime);
+                };
+
+                uttr.onend = proceedNext;
+                uttr.onerror = proceedNext;
+
+                // 連続再生によるバグを防ぐため、少しだけ待ってから再生
+                setTimeout(() => { synth.speak(uttr); }, 10);
+            }
+
+            speakNextChunk();
         }
+        // ------------------------------------------------------------------------
 
         speakBtn.onclick = speakAndLog;
         ttsInput.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'; });
@@ -700,10 +828,13 @@
             function buildRecognition() {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 const rec = new SpeechRecognition();
-                rec.lang = 'ja-JP'; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1;
+                rec.lang = 'ja-JP'; 
+                rec.continuous = !isAndroid; // ★ 変更: Android特有の繰り返し増殖バグを防ぐため、Androidのみ false にする
+                rec.interimResults = true; 
+                rec.maxAlternatives = 1;
 
                 rec.onstart = () => { isApiActive = true; clearTimeout(restartTimer); restartTimer = null; };
-
+                
                 rec.onresult = (event) => {
                     let interimTranscript = ''; let newFinal = '';
                     for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -759,19 +890,37 @@
                 if (document.visibilityState === 'visible' && isUserListening && !isApiActive) scheduleRestart(800);
             });
 
+            // --- ★ 変更: マイクの開始と停止を1つのボタンで賢く切り替える（トグル処理） ---
             startBtn.onclick = () => {
-                isUserListening = true;
-                if (!isAndroid) initVolumeMeter(); 
-                recognition = buildRecognition(); 
-                try { recognition.start(); } catch(e) { scheduleRestart(); }
-                startBtn.style.display = 'none'; stopBtn.style.display = 'inline-block';
-            };
+                if (!isUserListening) {
+                    // 【開始の処理】
+                    isUserListening = true;
+                    
+                    // Android用: 無音を流してマイクが「無音だ」と勘違いしてピコンと鳴るのを防ぐ
+                    startSilentAudio(); 
+                    
+                    if (!isAndroid) initVolumeMeter(); 
+                    recognition = buildRecognition(); 
+                    try { recognition.start(); } catch(e) { scheduleRestart(); }
+                    
+                    startBtn.textContent = '👂 聞き取り中... (停止)';
+                    startBtn.classList.add('listening-active');
+                } else {
+                    // 【停止の処理】
+                    isUserListening = false; 
+                    clearTimeout(restartTimer); 
+                    restartTimer = null;
+                    
+                    stopSilentAudio(); // Androidの無音再生も止める
 
-            stopBtn.onclick = () => {
-                isUserListening = false; clearTimeout(restartTimer); restartTimer = null;
-                if (recognition) { try { recognition.stop(); } catch(e) {} recognition = null; }
-                sttInterim.textContent = ""; startBtn.style.display = 'inline-block'; stopBtn.style.display = 'none';
+                    if (recognition) { try { recognition.stop(); } catch(err) {} recognition = null; }
+                    sttInterim.textContent = ""; 
+                    
+                    startBtn.textContent = '🎤 聞き取り開始';
+                    startBtn.classList.remove('listening-active');
+                }
             };
+            // ------------------------------------------------------------------------
         }
 
         // --- エクスポート ---
