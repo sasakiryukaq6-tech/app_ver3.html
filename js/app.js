@@ -15,6 +15,8 @@ let envAudioContext = null;
 let workletNode = null;
 let envStream = null;
 let lastCaptionTime = 0;
+let isTtsSpeaking = false; // ★ 追加: 自分の端末が読み上げ中かどうかを判定するフラグ
+let isSettingsInitialized = false; // ★ 追加: 設定画面の多重初期化を防ぐフラグ
 
 const isAndroid = /Android/i.test(navigator.userAgent);
 
@@ -72,6 +74,9 @@ window.addEventListener('DOMContentLoaded', async () => { // ★ async を追加
         nameOverlay.style.display = 'none'; 
         myNameInput.value = savedName; // ★ 修正：保存されていた名前を画面の入力欄に反映
     }
+
+    // ★ 追加: 音声合成エンジンを早期に起動させてリスト取得の遅延（空っぽになるバグ）を防ぐ
+    if (window.speechSynthesis) window.speechSynthesis.getVoices();
 
     // ★ 修正: 設定の読み込みが終わるのを待つ
     await loadSettings();
@@ -225,12 +230,6 @@ function saveMessages() {
 }
 function messagesToText() { return window.chatMessages.map(m => `${m.name}： ${m.text}`).join('\n'); }
 function escapeHTML(str) { return str.replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t])); }
-function getColorForName(n) {
-    const pals = [{bg:'#fff3e0',c:'#e65100'},{bg:'#fce4ec',c:'#c2185b'},{bg:'#e3f2fd',c:'#1565c0'}];
-    let h = 0; for(let i=0;i<n.length;i++) h = n.charCodeAt(i) + ((h<<5)-h);
-    const p = pals[Math.abs(h)%pals.length];
-    return { bg: p.bg, border: p.c, nameColor: p.c };
-}
 
 // --- 通信ダミー（webrtc.jsがない場合のエラー回避） ---
 if (typeof broadcastData !== 'function') window.broadcastData = () => {};
@@ -273,7 +272,6 @@ async function initVolumeMeter() {
         function updateMeter() {
             if (!isUserListening) { 
                 volumeMeter.style.width = '0%'; 
-                requestAnimationFrame(updateMeter); 
                 return; 
             }
             analyser.getByteFrequencyData(dataArray);
@@ -358,23 +356,42 @@ function initUIEvents() {
         broadcastTypingState(isMyTyping);
     };
 
+    // ★ 追加: ドロップダウンメニューの開閉制御
+    const chatMenuBtn = document.getElementById('chatMenuBtn');
+    const chatMenuDropdown = document.getElementById('chatMenuDropdown');
+    
+    chatMenuBtn.onclick = (e) => {
+        e.stopPropagation(); // 外側クリック検知のためイベント伝播を止める
+        chatMenuDropdown.classList.toggle('active');
+    };
+    
+    // 画面のどこかをクリックしたらメニューを閉じる
+    document.addEventListener('click', (e) => {
+        if (!chatMenuDropdown.contains(e.target) && e.target !== chatMenuBtn) {
+            chatMenuDropdown.classList.remove('active');
+        }
+    });
+
     // リセット
     document.getElementById('clearChatBtn').onclick = () => {
-        if(confirm("消去しますか？")) { 
+        chatMenuDropdown.classList.remove('active'); // ★ メニューを閉じる
+        if(confirm("現在の会話を消去しますか？")) { 
             window.chatMessages = []; 
             renderAllMessages(); 
-            localforage.removeItem('chatMessages'); // ★修正
+            localforage.removeItem('chatMessages'); 
         }
     };
     
-    // コピー・保存
+    // コピー
     document.getElementById('copyChatBtn').onclick = () => {
-        navigator.clipboard.writeText(messagesToText()).then(() => alert("コピー完了"));
+        chatMenuDropdown.classList.remove('active'); // ★ メニューを閉じる
+        navigator.clipboard.writeText(messagesToText()).then(() => alert("会話をコピーしました．"));
     };
 
-    // ★ 追加: ここから下の「保存」処理を追加してください
+    // 保存
     document.getElementById('downloadChatBtn').onclick = () => {
-        if (!window.chatMessages.length) { alert("保存する履歴がありません。"); return; }
+        chatMenuDropdown.classList.remove('active'); // ★ メニューを閉じる
+        if (!window.chatMessages.length) { alert("保存する履歴がありません．"); return; }
         const blob = new Blob([messagesToText()], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const date = new Date();
@@ -392,6 +409,12 @@ function initUIEvents() {
     const menuBtn = document.getElementById('mobileMenuBtn');
     const panel = document.querySelector('.sync-panel');
     const overlay = document.getElementById('drawerOverlay');
+    
+    // ★ 変更: 新しいアイコン（複数人のシルエット）のパスに差し替え
+    const connectSvg = `<span class="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor"><path d="M640-80v-90q-56-18-94-64t-44-106h80q8 43 40.5 71.5T700-240h120q25 0 42.5 17.5T880-180v100H640Zm120-200q-33 0-56.5-23.5T680-360q0-33 23.5-56.5T760-440q33 0 56.5 23.5T840-360q0 33-23.5 56.5T760-280ZM360-400q0-150 105-255t255-105v80q-117 0-198.5 81.5T440-400h-80Zm160 0q0-83 58.5-141.5T720-600v80q-50 0-85 35t-35 85h-80ZM80-520v-100q0-25 17.5-42.5T140-680h120q45 0 77.5-28.5T378-780h80q-6 60-44 106t-94 64v90H80Zm120-200q-33 0-56.5-23.5T120-800q0-33 23.5-56.5T200-880q33 0 56.5 23.5T280-800q0 33-23.5 56.5T200-720Z"/></svg></span>`;
+    
+    const closeSvg = `<span class="icon"><svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" fill="currentColor"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg></span>`;
+
     if (menuBtn) {
         // ★変更: ボタンを押した時の処理を「すでに開いていれば閉じ、閉じていれば開く」という条件分岐に変更
         menuBtn.onclick = () => { 
@@ -503,8 +526,16 @@ function initSelectionPopup() {
 // 他のファイルから呼ばれる指標表示
 window.handleRemoteTyping = function(d) {
     const indicator = document.getElementById('typingIndicator');
-    if (d.isTyping) { indicator.textContent = `🖐️ ${d.name}さんが入力中...`; indicator.style.display = 'block'; }
-    else indicator.style.display = 'none';
+    // 手のひらアイコン
+    const handIcon = `<svg class="ui-icon" viewBox="0 -960 960 960" fill="currentColor"><path d="M480-120q-100 0-170-70t-70-170v-300q0-25 17.5-42.5T300-720q25 0 42.5 17.5T360-660v280h60v-400q0-25 17.5-42.5T480-840q25 0 42.5 17.5T540-780v340h60v-280q0-25 17.5-42.5T660-780q25 0 42.5 17.5T720-720v280h60v-160q0-25 17.5-42.5T840-660q25 0 42.5 17.5T900-600v260q0 92-64 156t-156 64H480Z"/></svg>`;
+    
+    if (d.isTyping) { 
+        indicator.innerHTML = `${handIcon} ${escapeHTML(d.name)}さんが入力中...`; 
+        indicator.style.display = 'block'; 
+    }
+    else {
+        indicator.style.display = 'none';
+    }
 };
 
 // --- 音声認識 (STT) ---
@@ -522,6 +553,9 @@ function startSTT() {
     recognition.onstart = () => { isApiActive = true; clearTimeout(restartTimer); restartTimer = null; };
 
     recognition.onresult = (e) => {
+        // ★ 追加: 自分が読み上げている最中の音声は拾わずにすべて破棄する（エコー防止）
+        if (isTtsSpeaking) return;
+
         let interim = ''; let final = '';
         for (let i = e.resultIndex; i < e.results.length; ++i) {
             if (e.results[i].isFinal) final += e.results[i][0].transcript + '．\n\n';
@@ -535,7 +569,8 @@ function startSTT() {
             addMessage(getMyName(), final.trim(), 'stt');
             broadcastData(final.trim());
         }
-        sttInterim.textContent = interim ? "👂: " + interim : "";
+        const earIcon = `<svg class="ui-icon" viewBox="0 -960 960 960"><path d="M240-80q62 0 101.5-31t60.5-91q17-50 32.5-70t71.5-64q62-50 98-113t36-151q0-119-80.5-199.5T360-880q-119 0-199.5 80.5T80-600h80q0-85 57.5-142.5T360-800q85 0 142.5 57.5T560-600q0 68-27 116t-77 86q-52 38-81 74t-43 78q-14 44-33.5 65T240-160q-33 0-56.5-23.5T160-240H80q0 66 47 113t113 47Zm191-449.5q29-29.5 29-70.5 0-42-29-71t-71-29q-42 0-71 29t-29 71q0 41 29 70.5t71 29.5q42 0 71-29.5ZM740-379l-59-59q19-37 29-77.5t10-84.5q0-44-10-84t-29-77l59-59q29 49 44.5 104.5T800-600q0 61-15.5 116.5T740-379Zm117 116-59-58q39-60 60.5-130T880-598q0-78-21.5-148.5T797-877l60-60q49 72 76 157.5T960-600q0 94-27 179.5T857-263Z"/></svg>`;
+        sttInterim.innerHTML = interim ? `${earIcon} ${escapeHTML(interim)}` : "";
         
         const isAtBottom = chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight < 50;
         if (isAtBottom && (final || interim)) chatLog.scrollTop = chatLog.scrollHeight;
@@ -545,9 +580,13 @@ function startSTT() {
         isApiActive = false;
         if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
             isUserListening = false;
-            document.getElementById('startBtn').textContent = '🎤 聞き取り開始';
+            
+            // ★ 修正: エラーで強制終了した際にも、正しいSVGアイコンで復元する
+            const micSvg = `<span class="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg></span>`;
+            document.getElementById('startBtn').innerHTML = micSvg + '<span class="text">聞き取り</span>';
             document.getElementById('startBtn').classList.remove('listening-active');
-            alert("マイクの使用が許可されていません。"); return;
+            
+            alert("マイクの使用が許可されていません．"); return;
         }
         if (e.error === 'aborted') return;
         scheduleRestart((e.error === 'audio-capture') ? 1000 : 250);
@@ -599,9 +638,20 @@ function speakAndLog() {
 
     const chunks = text.match(/.*?[、。，．！？\n\s]+|.{1,25}/g) || [text];
     let idx = 0; let offset = 0;
+
+    // ★ 追加: 再生キューに入るタイミングでフラグをオンにする
+    isTtsSpeaking = true;
     
     function play() {
-        if (idx >= chunks.length) { speakingQueueCount--; if(speakingQueueCount<=0) renderAllMessages(); return; }
+        if (idx >= chunks.length) { 
+            speakingQueueCount--; 
+            if(speakingQueueCount<=0) {
+                renderAllMessages(); 
+                // ★ 追加: 全ての文節を読み終わったらフラグをオフにし、マイクの耳を開ける
+                isTtsSpeaking = false;
+            }
+            return; 
+        }
         const uttr = new SpeechSynthesisUtterance(chunks[idx]);
         uttr.lang = 'ja-JP'; uttr.rate = savedTtsRate; uttr.pitch = savedTtsPitch;
         
@@ -687,12 +737,6 @@ function showAudioCaption(t) {
     c.style.animation = 'fadeInOut 3s forwards';
 }
 
-function handleRemoteTyping(d) {
-    const indicator = document.getElementById('typingIndicator');
-    if (d.isTyping) { indicator.textContent = `🖐️ ${d.name}さんが入力中...`; indicator.style.display = 'block'; }
-    else indicator.style.display = 'none';
-}
-
 async function initSettingsLogic() { // ★ async 化
     const disp = document.getElementById('currentFontSizeDisplay');
     const toggle = document.getElementById('darkModeToggle');
@@ -702,27 +746,39 @@ async function initSettingsLogic() { // ★ async 化
 
     // 現在の値をUIに反映
     disp.textContent = currentFontSize;
-
-    // ★ 修正: localStorage ではなく localforage から取得
     const isDark = await localforage.getItem('darkMode');
     toggle.checked = isDark === true;
-
     rate.value = savedTtsRate;
     pitch.value = savedTtsPitch;
     document.getElementById('rateValue').textContent = savedTtsRate;
     document.getElementById('pitchValue').textContent = savedTtsPitch;
 
     // 音声リスト
+    // ★ 修正: 音声リストの取得バグを防止する堅牢な処理
     async function updateVoices() {
-        const vs = window.speechSynthesis.getVoices().filter(v => v.lang.includes('ja'));
-        sel.innerHTML = vs.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+        let vs = window.speechSynthesis.getVoices().filter(v => v.lang.includes('ja'));
         
-        // ★ 修正: 音声の選択状態も localforage から取得
-        const savedVoice = await localforage.getItem('ttsVoice');
-        sel.value = savedVoice || "";
+        // まだ準備ができておらずリストが空の場合、0.3秒待ってから再取得する
+        if (vs.length === 0) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            vs = window.speechSynthesis.getVoices().filter(v => v.lang.includes('ja'));
+        }
+
+        if (vs.length > 0) {
+            sel.innerHTML = vs.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+            const savedVoice = await localforage.getItem('ttsVoice');
+            if (savedVoice) sel.value = savedVoice;
+        } else {
+            // それでもダメな場合は空欄にならず案内を出す
+            sel.innerHTML = '<option value="">(音声を準備中...)</option>';
+        }
     }
     await updateVoices();
     window.speechSynthesis.onvoiceschanged = updateVoices;
+
+    // ★ 追加: イベントリスナーが「開くたびに増殖する」バグを防ぐ
+    if (isSettingsInitialized) return;
+    isSettingsInitialized = true;
 
     // イベント登録（変更即反映）
     document.getElementById('fontIncreaseBtn').onclick = () => { currentFontSize += 2; saveSet(); };
@@ -738,6 +794,22 @@ async function initSettingsLogic() { // ★ async 化
         localforage.setItem('ttsVoice', sel.value); 
         showSetToast(); 
     };
+
+    // ★ 追加: スライダーを動かした時に数値をリアルタイム表示し、指を離した時に保存する
+    // （※inputとchangeを分けることで、ドラッグ中の無駄な保存処理によるアプリの重さを防ぎます）
+    rate.addEventListener('input', () => { document.getElementById('rateValue').textContent = rate.value; });
+    rate.addEventListener('change', () => {
+        savedTtsRate = parseFloat(rate.value);
+        localforage.setItem('ttsRate', savedTtsRate);
+        showSetToast();
+    });
+
+    pitch.addEventListener('input', () => { document.getElementById('pitchValue').textContent = pitch.value; });
+    pitch.addEventListener('change', () => {
+        savedTtsPitch = parseFloat(pitch.value);
+        localforage.setItem('ttsPitch', savedTtsPitch);
+        showSetToast();
+    });
 
     function saveSet() { 
         localforage.setItem('appFontSize', currentFontSize); 

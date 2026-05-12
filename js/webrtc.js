@@ -33,7 +33,10 @@ function initWebRTC() {
         if (err.type === 'peer-unavailable') errorMsg = "相手がオフラインか、IDが間違っています．";
         if (err.type === 'network') errorMsg = "ネットワークが不安定です．";
         alert(errorMsg);
-        document.getElementById('syncStatus').textContent = '⚠️ エラー';
+        
+        // エラーのアイコン（警告マーク）
+        const warnIcon = `<svg class="ui-icon" style="color:#f44336;" viewBox="0 -960 960 960"><path d="M440-280h80v-80h-80v80Zm0-160h80v-200h-80v200Zm40 360q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg>`;
+        document.getElementById('syncStatus').innerHTML = `${warnIcon} エラー`;
     });
 
     // ★ 追加: 接続ボタン自体の処理をここに登録しておく
@@ -65,14 +68,17 @@ function setupInviteButtons(id) {
         navigator.clipboard.writeText(inviteUrl).then(() => alert("招待URLをコピーしました．"));
     };
 
+    // スマホアイコンの定義
+    const phoneIcon = `<svg class="ui-icon" viewBox="0 -960 960 960"><path d="M280-40q-33 0-56.5-23.5T200-120v-720q0-33 23.5-56.5T280-920h400q33 0 56.5 23.5T760-840v720q0 33-23.5 56.5T680-40H280Zm0-200h400v-480H280v480Zm0 120h400v-40H280v40Zm0-680h400v-40H280v40Zm200 620q17 0 28.5-11.5T520-120q0-17-11.5-28.5T480-160q-17 0-28.5 11.5T440-120q0 17 11.5 28.5T480-80ZM280-840v40-40Zm0 760v-40 40Z"/></svg>`;
+
     qrBtn.onclick = () => {
         const container = document.getElementById('qrContainer');
         if (container.style.display === 'block') {
             container.style.display = 'none';
-            qrBtn.textContent = '📱 QR表示';
+            qrBtn.innerHTML = `${phoneIcon} QR表示`; // textContent を innerHTML に変更
         } else {
             container.style.display = 'block';
-            qrBtn.textContent = '📱 閉じる';
+            qrBtn.innerHTML = `${phoneIcon} 閉じる`; // textContent を innerHTML に変更
             document.getElementById('qrcode').innerHTML = '';
             new QRCode(document.getElementById("qrcode"), { text: inviteUrl, width: 150, height: 150 });
         }
@@ -152,9 +158,13 @@ function setupConnection(conn) {
 
 function updateSyncStatusUI() {
     const count = connections.length;
-    const statusText = count > 0 ? `✅ 接続完了 (${count}台)` : `現在オフラインです`;
-    document.getElementById('syncStatus').textContent = statusText;
-    document.getElementById('syncStatusSummary').textContent = count > 0 ? `(✅ ${count}台)` : `(オフライン)`;
+    // チェックマークのアイコン
+    const checkIcon = `<svg class="ui-icon" style="color:#4caf50;" viewBox="0 -960 960 960"><path d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm-56-252 226-226-34-34-192 192-86-86-34 34 120 120Z"/></svg>`;
+    
+    // textContent を innerHTML に変更して描画
+    const statusText = count > 0 ? `${checkIcon} 接続完了 (${count}台)` : `現在オフラインです`;
+    document.getElementById('syncStatus').innerHTML = statusText;
+    document.getElementById('syncStatusSummary').innerHTML = count > 0 ? `(${checkIcon} ${count}台)` : `(オフライン)`;
 }
 
 // app.jsから呼ばれる関数

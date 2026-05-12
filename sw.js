@@ -1,7 +1,7 @@
-// ★ 1. バージョン名を変更する（v1 から v2 などに変えることでアップデートを検知させます）
-const CACHE_NAME = 'comm-tool-cache-v16';
+// ★ バージョン名を変更してキャッシュを更新させる
+const CACHE_NAME = 'comm-tool-cache-v24';
 
-// ★ 2. キャッシュリストから settings.html と settings.js を削除
+// ★ 外部のライブラリやフォントもすべてキャッシュのリストに加える
 const urlsToCache = [
     './',
     './index.html',
@@ -9,7 +9,15 @@ const urlsToCache = [
     './js/app.js',
     './js/webrtc.js',
     './js/audio-processor.js',
-    './manifest.json'
+    './manifest.json',
+    './icon-192.png',
+    './icon-512.png',
+    // 外部CDNライブラリ群
+    'https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js',
+    'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs',
+    'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js',
+    'https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap'
 ];
 
 self.addEventListener('install', (event) => {

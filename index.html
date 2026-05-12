@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>総合コミュニケーション支援ツール</title>
+    <title>コミュニケーション支援ツール</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -23,7 +23,11 @@
 <body>
     <div id="nameEntryOverlay" class="name-entry-overlay">
         <div class="name-entry-card">
-            <h2>👋 はじめに</h2>
+            <h2>
+                <svg class="ui-icon" viewBox="0 -960 960 960">
+                    <path d="M320-120q-33 0-56.5-23.5T240-200v-320q0-20 9-37.5t25-28.5l182-124q16-11 36.5-12.5T531-714l129 130v-96q0-17 11.5-28.5T700-720q17 0 28.5 11.5T740-680v200L556-300q-12 12-28 17.5T494-280H320v160Zm0-80h174l186-186v-12L529-549l-123 85v224h-86v-160Zm174-160Zm26-360q-17 0-28.5-11.5T480-760q0-17 11.5-28.5T520-800q17 0 28.5 11.5T560-760q0 17-11.5 28.5T520-720Zm-120-80q-17 0-28.5-11.5T360-840q0-17 11.5-28.5T400-880q17 0 28.5 11.5T440-840q0 17-11.5 28.5T400-800ZM640-840q-17 0-28.5-11.5T600-880q-17 0-28.5 11.5T640-920q17 0 28.5 11.5T680-880q0 17-11.5 28.5T640-840Z"/>
+                </svg> はじめに
+            </h2>
             <p>会話に参加するための名前を入力してください．．<br><small>（ニックネームでOKです）</small></p>
             <input type="text" id="initialNameInput" placeholder="例：A先生，太郎...">
             <button id="entryBtn">会話を始める</button>
@@ -41,7 +45,30 @@
         </button>
         
         <h1>会話ノート</h1>
-        <div>
+
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <div class="dropdown-wrapper">
+                <button id="chatMenuBtn" class="action-icon-btn" aria-label="メニュー">
+                    <span class="icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor"><path d="M480-160q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm0-240q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm0-240q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Z"/></svg>
+                    </span>
+                </button>
+                <div id="chatMenuDropdown" class="dropdown-menu">
+                    <button id="copyChatBtn" class="dropdown-item">
+                        <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor"><path d="M360-240q-33 0-56.5-23.5T280-320v-480q0-33 23.5-56.5T360-880h360q33 0 56.5 23.5T800-800v480q0-33-23.5-56.5T720-240H360Zm0-80h360v-480H360v480ZM200-80q-33 0-56.5-23.5T120-160v-560h80v560h440v80H200Zm160-240v-480 480Z"/></svg></span>
+                        <span class="text">コピー</span>
+                    </button>
+                    <button id="downloadChatBtn" class="dropdown-item">
+                        <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor"><path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/></svg></span>
+                        <span class="text">保存</span>
+                    </button>
+                    <button id="clearChatBtn" class="dropdown-item delete-item">
+                        <span class="icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg></span>
+                        <span class="text">リセット</span>
+                    </button>
+                </div>
+            </div>
+
             <button id="settingsBtn" class="settings-link-btn action-icon-btn">
                 <span class="icon">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
@@ -58,7 +85,7 @@
         
         <details class="sync-panel" id="syncPanel">
             <summary class="sync-summary">
-                📡 通信・招待機能を開く 
+                <svg class="ui-icon" viewBox="0 -960 960 960"><path d="M480-160q-17 0-28.5-11.5T440-200q0-17 11.5-28.5T480-240q17 0 28.5 11.5T520-200q0 17-11.5 28.5T480-160Zm-40-160v-248l-182 82-32-74 214-98v-222h80v222l214 98-32 74-182-82v248h-80Zm-286 80-50-60q72-60 163.5-93T480-626q91 0 182.5 33T826-500l-50 60q-63-53-143.5-82.5T480-552q-72 0-152.5 29.5T154-440Z"/></svg> 通信・招待機能を開く 
                 <span id="syncStatusSummary">（オフライン）</span>
             </summary>
             <div class="sync-content">
@@ -66,8 +93,15 @@
                     <div class="label">あなたのID：</div>
                     <div id="myPeerId" class="sync-id">取得中...</div>
                     <div class="btn-group">
-                        <button id="copyUrlBtn" class="invite-btn" style="display:none;">🔗 URLコピー</button>
-                        <button id="showQrBtn" class="invite-btn" style="display:none;">📱 QRコード表示</button>
+                        <button id="copyUrlBtn" class="invite-btn" style="display:none;">
+                            <svg class="ui-icon" viewBox="0 -960 960 960" fill="currentColor">
+                                <path d="M440-280H280q-83 0-141.5-58.5T80-480q0-83 58.5-141.5T280-680h160v80H280q-50 0-85 35t-35 85q0 50 35 85t85 35h160v80ZM320-440v-80h320v80H320Zm200 160v-80h160q50 0 85-35t35-85q0-50-35-85t-85-35H520v-80h160q83 0 141.5 58.5T880-480q0 83-58.5 141.5T680-280H520Z"/>
+                            </svg> URLコピー</button>
+                        <button id="showQrBtn" class="invite-btn" style="display:none;">
+                            <svg class="ui-icon" viewBox="0 -960 960 960" fill="currentColor">
+                                <path d="M520-120v-80h80v80h-80Zm-80-80v-200h80v200h-80Zm320-120v-160h80v160h-80Zm-80-160v-80h80v80h-80Zm-480 80v-80h80v80h-80Zm-80-80v-80h80v80h-80Zm360-280v-80h80v80h-80ZM180-660h120v-120H180v120Zm-60 60v-240h240v240H120Zm60 420h120v-120H180v120Zm-60 60v-240h240v240H120Zm540-540h120v-120H660v120Zm-60 60v-240h240v240H600Zm80 480v-120h-80v-80h160v120h80v80H680ZM520-400v-80h160v80H520Zm-160 0v-80h-80v-80h240v80h-80v80h-80Zm40-200v-160h80v80h80v80H400Zm-190-90v-60h60v60h-60Zm0 480v-60h60v60h-60Zm480-480v-60h60v60h-60Z"/>
+                            </svg> QRコード表示
+                        </button>
                     </div>
                 </div>
 
@@ -87,44 +121,23 @@
         </details>
 
         <div class="chat-container">
-            <div class="chat-header">
-                <div class="header-right" style="width: 100%; justify-content: flex-end;">
-                    <button id="copyChatBtn" class="action-btn action-icon-btn">
-                        <span class="icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
-                                <path d="M360-240q-33 0-56.5-23.5T280-320v-480q0-33 23.5-56.5T360-880h360q33 0 56.5 23.5T800-800v480q0-33-23.5-56.5T720-240H360Zm0-80h360v-480H360v480ZM200-80q-33 0-56.5-23.5T120-160v-560h80v560h440v80H200Zm160-240v-480 480Z"/>
-                            </svg>
-                        </span>
-                        <span class="text">コピー</span>
-                    </button>
-                    <button id="downloadChatBtn" class="action-btn action-icon-btn">
-                        <span class="icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
-                                <path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/>
-                            </svg>
-                        </span>
-                        <span class="text">保存</span>
-                    </button>
-                    <button id="clearChatBtn" class="clear-btn action-icon-btn">
-                        <span class="icon">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
-                                <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
-                            </svg>
-                        </span>
-                        <span class="text">リセット</span>
-                    </button>
-                </div>
-            </div>
-
+            
             <div id="envSoundCaption" class="caption-bar"></div>
             <div id="typingIndicator" class="typing-indicator"></div>
-            <div id="selectionPopup">📖 辞書に登録</div>
+            <div id="selectionPopup">
+                <svg class="ui-icon" viewBox="0 -960 960 960" fill="currentColor">
+                    <path d="M160-391h45l23-66h104l24 66h44l-97-258h-46l-97 258Zm81-103 38-107h2l38 107h-78Zm319-70v-68q33-14 67.5-21t72.5-7q26 0 51 4t49 10v64q-24-9-48.5-13.5T700-600q-38 0-73 9.5T560-564Zm0 220v-68q33-14 67.5-21t72.5-7q26 0 51 4t49 10v64q-24-9-48.5-13.5T700-380q-38 0-73 9t-67 27Zm0-110v-68q33-14 67.5-21t72.5-7q26 0 51 4t49 10v64q-24-9-48.5-13.5T700-490q-38 0-73 9.5T560-454Zm-40 176q44-21 88.5-31.5T700-320q36 0 70.5 6t69.5 18v-396q-33-14-68.5-21t-71.5-7q-47 0-93 12t-87 36v394Zm-40 118q-48-38-104-59t-116-21q-42 0-82.5 11T100-198q-21 11-40.5-1T40-234v-482q0-11 5.5-21T62-752q46-24 96-36t102-12q58 0 113.5 15T480-740q51-30 106.5-45T700-800q52 0 102 12t96 36q11 5 16.5 15t5.5 21v482q0 23-19.5 35t-40.5 1q-37-20-77.5-31T700-240q-60 0-116 21t-104 59Z"/>
+                </svg> 辞書に登録
+            </div>
             
             <div id="chatLog" class="chat-textarea" data-placeholder="ここに会話の履歴が表示されます..."></div>
             <div id="sttInterim"></div>
 
             <div class="meter-container">
-                <span class="meter-label">🎤 マイク入力：</span>
+                <span class="meter-label">
+                    <svg class="ui-icon" viewBox="0 0 24 24">
+                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                    </svg> マイク入力：</span>
                 <div class="meter-bar-bg"><div id="volumeMeter" class="meter-bar-fill"></div></div>
             </div>
 
@@ -140,7 +153,7 @@
 
                 <button id="waitBtn" class="wait-btn action-icon-btn" aria-label="待って">
                     <span class="icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
                             <path d="M259-139q-99-99-99-241v-380q0-17 11.5-28.5T200-800q17 0 28.5 11.5T240-760v240h80v-320q0-17 11.5-28.5T360-880q17 0 28.5 11.5T400-840v320h80v-360q0-17 11.5-28.5T520-920q17 0 28.5 11.5T560-880v360h80v-280q0-17 11.5-28.5T680-840q17 0 28.5 11.5T720-800v230q-29 21-44.5 53T660-450v50h-50q-63 0-106.5 43.5T460-250v50h60v-50q0-38 26-64t64-26h110v-110q0-38 26-64t64-26h30v160q0 142-99 241T500-40q-142 0-241-99Z"/>
                         </svg>
                     </span>
@@ -164,15 +177,15 @@
     <div id="settingsModal" class="modal-overlay">
         <div class="modal-content settings-container">
             <div class="modal-header">
-                <h2>⚙️ 設定・辞書</h2>
-                <button id="closeSettingsBtn" class="close-icon-btn">✖</button>
+                <h2><svg class="ui-icon" viewBox="0 -960 960 960"><path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-1 13.5l103 78-110 190-119-50q-11 8-23 15t-24 12L590-80H370Zm70-80h80l12-96q21-9 37.5-19.5T599-301l91 38 40-68-79-60q4-14 6-27.5t2-29.5q0-16-2-29.5t-6-27.5l79-60-40-68-91 38q-14-15-30.5-25.5T532-704l-12-96h-80l-12 96q-21 9-37.5 19.5T361-659l-91-38-40 68 79 60q-4 14-6 27.5t-2 29.5q0 16 2 29.5t6 27.5l-79 60 40 68 91-38q14 15 30.5 25.5T428-256l12 96Zm40-220q42 0 71-29t29-71q0-42-29-71t-71-29q-42 0-71 29t-29 71q0 42 29 71t71 29Zm0-100Z"/></svg> 設定・辞書</h2>
+                <button id="closeSettingsBtn" class="close-icon-btn"><svg class="ui-icon" viewBox="0 -960 960 960"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg></button>
             </div>
-            <div id="saveToast">✅ 設定を保存しました</div>
+            <div id="saveToast"><svg class="ui-icon" viewBox="0 -960 960 960"><path d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm-56-252 226-226-34-34-192 192-86-86-34 34 120 120Z"/></svg> 設定を保存しました</div>
 
             <div class="section-title">便利機能</div>
             <div class="settings-grid">
                 <div class="settings-item">
-                    <label>🔔 環境音AI（周囲の音を文字化）</label>
+                    <label><svg class="ui-icon" viewBox="0 -960 960 960"><path d="M160-200v-80h80v-280q0-83 50-147.5T420-784v-28q0-25 17.5-42.5T480-872q25 0 42.5 17.5T540-812v28q80 20 130 84.5T720-560v280h80v80H160Zm320-300Zm0 420q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM320-280h320v-280q0-66-47-113t-113-47q-66 0-113 47t-47 113v280Z"/></svg> 環境音AI（周囲の音を文字化）</label>
                     <label class="env-toggle" style="display: inline-flex;">
                         <input type="checkbox" id="envSoundToggle"> 環境音の監視をオンにする (注)動作が重くなるかも
                     </label>
@@ -182,7 +195,11 @@
             <div class="section-title">文字と音声の調整</div>
             <div class="settings-grid">
                 <div class="settings-item">
-                    <label>🔠 アプリの文字サイズ</label>
+                    <label>
+                        <svg class="ui-icon" viewBox="0 -960 960 960" fill="currentColor">
+                            <path d="M560-160v-520H360v-120h520v120H680v520H560Zm-360 0v-320H80v-120h360v120H320v320H200Z"/>
+                        </svg> アプリの文字サイズ
+                    </label>
                     <div class="font-controls">
                         <button class="font-btn" id="fontIncreaseBtn">＋ 大きくする</button>
                         <button class="font-btn" id="fontDecreaseBtn">－ 小さくする</button>
@@ -190,26 +207,38 @@
                     </div>
                 </div>
                 <div class="settings-item">
-                    <label>🌙 ダークモード（ナイトモード）</label>
+                    <label>
+                        <svg class="ui-icon" viewBox="0 -960 960 960">
+                            <path d="M480-120q-150 0-255-105T120-480q0-150 105-255t255-105q14 0 27.5 1t26.5 3q-41 29-65.5 75.5T444-660q0 90 63 153t153 63q55 0 101-24.5t75-65.5q2 13 3 26.5t1 27.5q0 150-105 255T480-120Zm0-80q88 0 158-53t97-133q-24 16-52 24.5t-59 8.5q-124 0-211-87t-87-211q0-31 8.5-59t24.5-52q-80 27-133 97t-53 158q0 117 81.5 198.5T480-200Zm-20-260Z"/>
+                        </svg> ダークモード（ナイトモード）
+                    </label>
                     <label class="env-toggle" style="display: inline-flex;">
                         <input type="checkbox" id="darkModeToggle"> 暗いテーマを使用する
                     </label>
                 </div>
                 <div class="settings-item">
-                    <label for="voiceSelect">👤 読み上げの声の種類</label>
+                    <label for="voiceSelect"><svg class="ui-icon" viewBox="0 -960 960 960"><path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Zm80-80h480v-32q0-11-5.5-20T700-306q-54-27-109-40.5T480-360q-56 0-111 13.5T260-306q-9 5-14.5 14t-5.5 20v32Zm240-320q33 0 56.5-23.5T560-640q0-33-23.5-56.5T480-720q-33 0-56.5 23.5T400-640q0 33 23.5 56.5T480-560Zm0-80Zm0 400Z"/></svg> 読み上げの声の種類</label>
                     <select id="voiceSelect"></select>
                 </div>
                 <div class="settings-item">
-                    <label for="rateSlider">🏃 読み上げの速度: <span id="rateValue">1.0</span></label>
+                    <label for="rateSlider">
+                        <svg class="ui-icon" viewBox="0 -960 960 960" fill="currentColor">
+                            <path d="M418-340q25 25 63 23.5t55-27.5l224-336-336 224q-26 18-28.5 54.5T418-340ZM204-160q-22 0-40.5-9.5T134-198q-26-47-40-97.5T80-400q0-83 31.5-156T197-683q54-54 127-85.5T480-800q82 0 154 31t126 84.5q54 53.5 86 125T879-406q1 55-12.5 107.5T825-198q-11 19-29.5 28.5T755-160H204Z"/>
+                        </svg> 読み上げの速度: <span id="rateValue">1.0</span>
+                    </label>
                     <input type="range" id="rateSlider" min="0.5" max="2" value="1" step="0.1">
                 </div>
                 <div class="settings-item">
-                    <label for="pitchSlider">🎵 読み上げの高さ: <span id="pitchValue">1.0</span></label>
+                    <label for="pitchSlider"><svg class="ui-icon" viewBox="0 -960 960 960"><path d="M400-120q-66 0-113-47t-47-113q0-66 47-113t113-47q23 0 42.5 5.5T480-418v-422h320v160H560v400q0 66-47 113t-113 47Z"/></svg> 読み上げの高さ: <span id="pitchValue">1.0</span></label>
                     <input type="range" id="pitchSlider" min="0" max="2" value="1" step="0.1">
                 </div>
             </div>
 
-            <div class="section-title">📖 ユーザー辞書</div>
+            <div class="section-title">
+                <svg class="ui-icon" viewBox="0 -960 960 960" fill="currentColor">
+                    <path d="M160-391h45l23-66h104l24 66h44l-97-258h-46l-97 258Zm81-103 38-107h2l38 107h-78Zm319-70v-68q33-14 67.5-21t72.5-7q26 0 51 4t49 10v64q-24-9-48.5-13.5T700-600q-38 0-73 9.5T560-564Zm0 220v-68q33-14 67.5-21t72.5-7q26 0 51 4t49 10v64q-24-9-48.5-13.5T700-380q-38 0-73 9t-67 27Zm0-110v-68q33-14 67.5-21t72.5-7q26 0 51 4t49 10v64q-24-9-48.5-13.5T700-490q-38 0-73 9.5T560-454Zm-40 176q44-21 88.5-31.5T700-320q36 0 70.5 6t69.5 18v-396q-33-14-68.5-21t-71.5-7q-47 0-93 12t-87 36v394Zm-40 118q-48-38-104-59t-116-21q-42 0-82.5 11T100-198q-21 11-40.5-1T40-234v-482q0-11 5.5-21T62-752q46-24 96-36t102-12q58 0 113.5 15T480-740q51-30 106.5-45T700-800q52 0 102 12t96 36q11 5 16.5 15t5.5 21v482q0 23-19.5 35t-40.5 1q-37-20-77.5-31T700-240q-60 0-116 21t-104 59Z"/>
+                </svg> ユーザー辞書
+            </div>
             <div class="dict-input-row">
                 <input type="text" id="dictWrong" placeholder="誤認識される言葉">
                 <input type="text" id="dictCorrect" placeholder="正しい言葉">

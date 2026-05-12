@@ -20,6 +20,16 @@ h1 { font-size: 1.3rem; margin: 0; color: #2c3e50; }
 h2 { font-size: 1.1rem; margin: 0; }
 
 /* =========================================
+   インラインSVGアイコン（絵文字の代替）
+========================================= */
+.ui-icon {
+    width: 1.2em; height: 1.2em;
+    vertical-align: -0.2em; /* テキストのベースラインに綺麗に合わせる */
+    display: inline-block;
+    fill: currentColor;
+}
+
+/* =========================================
    共通ボタンデザイン
 ========================================= */
 button { 
@@ -103,17 +113,7 @@ input[type="text"], select { box-sizing: border-box; padding: 10px; border: 1px 
    右側：チャット画面
 ========================================= */
 .chat-container { background: white; padding: 13px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
-.chat-header { 
-    /* 既存の display や border-bottom 等はそのまま */
-    display: flex; justify-content: space-between; align-items: center; 
-    border-bottom: 2px solid #e9ecef; 
-    
-    /* ★ 変更: 下の余白を削って、ログ表示エリアをさらに広げる */
-    padding-bottom: 4px; 
-    margin-bottom: 6px; 
-    
-    flex-shrink: 0; flex-wrap: wrap; gap: 5px;
-}
+
 .header-left { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
 .header-right { display: flex; gap: 8px; }
 .env-toggle { font-size: 0.85em; background: #fff3e0; padding: 4px 10px; border-radius: 20px; border: 1px solid #ffcc80; color: #e65100; cursor: pointer; display: flex; align-items: center; gap: 5px; }
@@ -247,8 +247,32 @@ textarea#ttsInput {
 .dict-item:last-child { border-bottom: none; }
 .dict-delete-btn { background-color: #dc3545; padding: 6px 12px; font-size: 0.85em; border-radius: 6px; }
 .dict-delete-btn:hover { background-color: #c82333; }
-#saveToast { display: none; background-color: #198754; color: white; text-align: center; padding: 10px; border-radius: 6px; margin-bottom: 20px; font-weight: bold; animation: fadeOut 3s forwards; }
-@keyframes fadeOut { 0% {opacity: 1;} 70% {opacity: 1;} 100% {opacity: 0; display: none;} }
+/* ★ 修正: absolute から fixed に変更し、画面（ビューポート）に対して固定する */
+#saveToast { 
+    display: none; 
+    position: fixed;    /* ここを fixed に変更 */
+    top: 40px;          /* 画面の一番上からの距離 */
+    left: 50%;          
+    transform: translateX(-50%); 
+    z-index: 9999;      /* モーダルよりもさらに最前面に表示 */
+    
+    background-color: #198754; 
+    color: white; 
+    text-align: center; 
+    padding: 10px 20px; 
+    border-radius: 30px; 
+    font-weight: bold; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3); /* 前面に出るため影を少し濃く */
+    
+    animation: toastPop 2s forwards; 
+}
+/* ★ 修正: 上から少しスライドしながら現れるアニメーション */
+@keyframes toastPop { 
+    0%   { opacity: 0; transform: translate(-50%, -10px); } 
+    15%  { opacity: 1; transform: translate(-50%, 0); } 
+    85%  { opacity: 1; transform: translate(-50%, 0); } 
+    100% { opacity: 0; transform: translate(-50%, -10px); display: none; } 
+}
 .settings-footer { text-align: center; margin-top: 30px; }
 .close-btn { background-color: #6c757d; }
 .close-btn:hover { background-color: #5a6268; }
@@ -336,6 +360,30 @@ textarea#ttsInput {
 }
 
 /* =========================================
+   ドロップダウンメニュー (操作用)
+========================================= */
+.dropdown-wrapper { position: relative; display: inline-block; }
+.dropdown-menu {
+    display: none; position: absolute; right: 0; top: 100%; margin-top: 8px;
+    background: white; border: 1px solid #ced4da; border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 2500;
+    flex-direction: column; overflow: hidden; min-width: 150px;
+}
+.dropdown-menu.active { display: flex; animation: fadeIn 0.2s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+.dropdown-item {
+    display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+    background: none; color: #333; border: none; border-radius: 0;
+    font-size: 1em; width: 100%; text-align: left; cursor: pointer;
+}
+.dropdown-item:hover { background-color: #f8f9fa; color: #0d6efd; }
+.dropdown-item.delete-item { color: #dc3545; }
+.dropdown-item.delete-item:hover { background-color: #ffe6e6; }
+.dropdown-item .icon svg { width: 1.2em; height: 1.2em; display: block; }
+.dropdown-item .text { display: inline; /* スマホでも文字を消さない */ }
+
+/* =========================================
    🌙 ダークモード用スタイル
 ========================================= */
 body.dark-mode { background-color: #121212; color: #e0e0e0; }
@@ -357,6 +405,13 @@ body.dark-mode .msg-text { color: #212529; }
 body.dark-mode .msg-name { color: #aaa; }
 /* 吹き出しの背景色が眩しすぎないように少し彩度を落とす */
 body.dark-mode .msg-bubble { filter: brightness(0.9) contrast(1.1); }
+
+/* ダークモード対応 (ファイル末尾のダークモードセクション内に追記) */
+body.dark-mode .dropdown-menu { background: #2d2d2d; border-color: #444; }
+body.dark-mode .dropdown-item { color: #e0e0e0; }
+body.dark-mode .dropdown-item:hover { background-color: #3d3d3d; color: #64b5f6; }
+body.dark-mode .dropdown-item.delete-item { color: #ff5252; }
+body.dark-mode .dropdown-item.delete-item:hover { background-color: #4a1919; }
 
 /* モーダル基本設定 */
 .modal-overlay {
@@ -382,7 +437,9 @@ body.dark-mode .modal-header { border-color: #333; }
     /* 高さや余白が滑らかに変化するようにトランジションを設定 */
     transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease, padding 0.3s ease;
     max-height: 100px; /* 通常時の十分な高さ */
-    overflow: hidden;
+    
+    /* ★変更: hidden から visible に変更（メニューが飛び出せるようにする） */
+    overflow: visible; 
     flex-shrink: 0;
 }
 
@@ -393,7 +450,10 @@ body.dark-mode .modal-header { border-color: #333; }
     margin-bottom: 0;
     padding-top: 0;
     padding-bottom: 0;
-    pointer-events: none; /* 隠れている時はクリック判定も消す */
+    pointer-events: none; 
+    
+    /* ★追加: 隠れる時だけは、中身を枠に合わせて切り取る */
+    overflow: hidden; 
 }
 
 /* =========================================
