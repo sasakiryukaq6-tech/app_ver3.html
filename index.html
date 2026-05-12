@@ -1,223 +1,118 @@
-<!-- 同じ人物の吹き出しが続く場合，名前の表示を省略する -->
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>総合コミュニケーション支援ツール (Web版)</title>
-    <style>
-        :root { --font-size: 14px; }
-        body { font-family: sans-serif; background-color: #f4f7f6; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; margin: 0; padding: 6px; font-size: var(--font-size); color: #333; display: flex; flex-direction: column; height: 100dvh; box-sizing: border-box; overflow: hidden; }
-        
-        .header { display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; margin-bottom: 10px; }
-        /* ★ 変更: 通信パネルのデザイン（PCでは左側に幅を固定して表示） */
-        /* ★ 変更: 通信パネルの幅を細く（240px）してスリム化 */
-        .sync-panel { background: #e3f2fd; padding: 10px 12px; border-radius: 8px; border: 1px solid #bbdefb; flex-shrink: 0; width: 230px; box-sizing: border-box; overflow-y: auto; max-height: 100%; }
-        .sync-id { font-weight: bold; font-size: 1.1em; letter-spacing: 1px; color: #1565c0; user-select: all; cursor: pointer; }
-        h1 { font-size: 1.3rem; margin: 0; color: #2c3e50; }
-        
-        .invite-btn { background-color: #6c757d; padding: 4px 8px; font-size: 0.85em; margin-left: 5px; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        .invite-btn:hover { background-color: #5a6268; }
-        #qrContainer { display: none; width: 100%; margin-top: 10px; padding: 15px; background: white; border-radius: 8px; text-align: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
-        #qrcode { display: inline-block; margin-top: 10px; padding: 10px; background: white; border: 1px solid #eee; border-radius: 8px; }
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>総合コミュニケーション支援ツール</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0d6efd">
+    <link rel="apple-touch-icon" href="icon-192.png">
 
-        .chat-container { background: white; padding: 13px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
-        .chat-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e9ecef; padding-bottom: 8px; margin-bottom: 10px; flex-shrink: 0; flex-wrap: wrap; gap: 5px;}
-        h2 { font-size: 1.1rem; margin: 0; }
-        
-        .chat-textarea { 
-            flex-grow: 1; width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 5px; 
-            border: 1px solid #ced4da; border-radius: 6px; font-size: 1em; 
-            background-color: #f0f4f8; transition: border-color 0.2s; line-height: 1.4; 
-            overflow-y: auto; cursor: text;
-            display: flex; flex-direction: column; gap: 8px;
-        }
-        .chat-textarea:focus { outline: none; border-color: #0d6efd; background-color: #fff; }
-        .chat-textarea:empty:before { content: attr(data-placeholder); color: #999; pointer-events: none; }
-
-        .typing-indicator { display: none; background-color: #ff9800; color: white; font-weight: bold; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
-        .wait-btn { background-color: #ff9800; }
-        .wait-btn:hover { background-color: #f57c00; }
-        .wait-btn.active { background-color: #d32f2f; }
-        
-        .tts-highlight-base { background-color: #fff9c4; border-radius: 4px; padding: 2px 0; }
-        .tts-highlight-word { background-color: #ffeb3b; color: #000; font-weight: bold; border-radius: 4px; padding: 2px 2px; border-bottom: 2px solid #fbc02d; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        
-        .meter-container { display: flex; align-items: center; gap: 10px; margin: 5px 0 10px 0; flex-shrink: 0; }
-        .meter-label { font-size: 0.85em; font-weight: bold; color: #555; white-space: nowrap; }
-        .meter-bar-bg { flex-grow: 1; height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); }
-        .meter-bar-fill { height: 100%; width: 0%; background: #4caf50; transition: width 0.05s linear, background-color 0.2s; }
-
-        .input-row { display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0; flex-wrap: wrap; }
-        .input-row input[type="text"], .input-row textarea { flex-grow: 1; margin-bottom: 0; min-width: 150px; }
-        
-        textarea#ttsInput {
-            resize: none; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; 
-            font-size: 1em; line-height: 1.4; box-sizing: border-box; overflow-y: hidden;
-            font-family: inherit;
-        }
-        
-        input[type="text"], select { box-sizing: border-box; padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 1em; }
-        button { background-color: #0d6efd; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 1em; font-weight: bold; transition: background-color 0.2s; white-space: nowrap; }
-        button:hover { background-color: #0b5ed7; }
-        .stop-btn { background-color: #dc3545; }
-        .stop-btn:hover { background-color: #c82333; }
-        /* ★ 追加: 聞き取り中（マイクオン）状態のボタンデザイン */
-        .listening-active {
-            background-color: #e8f5e9 !important;
-            color: #2e7d32 !important;
-            border: 2px solid #4caf50 !important;
-            animation: pulse-light 1.5s infinite;
-        }
-        @keyframes pulse-light {
-            0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
-        }
-        .clear-btn { background-color: #6c757d; padding: 6px 12px; font-size: 0.85em; }
-        .clear-btn:hover { background-color: #5a6268; }
-        .action-btn { background-color: #198754; padding: 6px 12px; font-size: 0.85em; }
-        .action-btn:hover { background-color: #157347; }
-        
-        /* ★ 追加: 設定ページへ移動するボタンのデザイン */
-        .settings-link-btn { background-color: #424649; color: white; text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85em; font-weight: bold; display: inline-block; }
-        .settings-link-btn:hover { background-color: #212529; }
-        
-        #sttInterim { min-height: 1.5em; color: #0d6efd; font-weight: bold; font-size: 0.9em; flex-shrink: 0; margin-top: 5px; }
-
-        @media (max-width: 500px) {
-            h1 { font-size: 1.1rem; }
-            button { padding: 10px 12px; }
-            /* ★ 変更: スマホ環境でもヘッダーを横並びに保つように修正 */
-            .header { flex-direction: row; align-items: center; justify-content: space-between; }
-            .chat-textarea { line-height: 1.35; }
-        }
-
-        .caption-bar { display: none; background-color: #e3f2fd; color: #0d47a1; padding: 8px 15px; border-radius: 6px; margin-bottom: 10px; font-weight: bold; text-align: center; border: 2px solid #90caf9; box-shadow: 0 2px 4px rgba(0,0,0,0.1); animation: fadeInOut 3s forwards; }
-        @keyframes fadeInOut { 0% { opacity: 0; transform: translateY(-5px); } 10% { opacity: 1; transform: translateY(0); } 80% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-5px); } }
-        
-        .msg-row { display: flex; width: 100%; }
-        .msg-row.right { justify-content: flex-end; }
-        .msg-row.left { justify-content: flex-start; }
-        .msg-wrapper { display: flex; flex-direction: column; max-width: 80%; }
-        .msg-row.right .msg-wrapper { align-items: flex-end; }
-        .msg-row.left .msg-wrapper { align-items: flex-start; }
-        .msg-name { font-size: 0.75em; color: #666; margin-bottom: 4px; font-weight: bold; }
-        .msg-bubble { padding: 6px 10px; border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; }
-        .msg-row.right .msg-bubble { border-top-right-radius: 2px; }
-        .msg-row.left .msg-bubble { border-top-left-radius: 2px; }
-        .msg-text { white-space: pre-wrap; word-wrap: break-word; display: block; color: #333; }
-
-        /* 選択時ポップアップ */
-        #selectionPopup { display: none; position: absolute; background-color: #212529; color: white; padding: 6px 12px; border-radius: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); cursor: pointer; font-size: 0.85em; font-weight: bold; z-index: 1000; }
-        #selectionPopup:hover { background-color: #424649; }
-        #selectionPopup::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border-width: 6px; border-style: solid; border-color: #212529 transparent transparent transparent; }
-
-        /* ★ 追加: 画面分割レイアウト（PCとスマホの切り替え） */
-        .main-wrapper {
-            display: flex;
-            flex-direction: row; /* PCでは横並び（左:通信, 右:ノート） */
-            flex-grow: 1;
-            gap: 15px;
-            min-height: 0;
-            width: 100%;
-        }
-
-        /* ★ 追加: 通信状況テキストの基本デザイン（PCの細いパネル用＝改行する） */
-        #syncStatusSummary {
-            display: block;
-            font-size: 0.85em;
-            font-weight: normal;
-            color: #555;
-            margin-top: 4px;
-            padding-left: 28px;
-        }
-
-        /* 画面幅が768px以下のスマホ・タブレット向けの設定 */
-        @media (max-width: 768px) {
-            .main-wrapper {
-                flex-direction: column; /* スマホでは縦並びに戻す */
-                gap: 10px;
-            }
-            .sync-panel {
-                width: 100%; /* スマホでは横幅いっぱいにする */
-                height: auto;
-            }
-            
-            /* ★ 追加: スマホの時は横幅に余裕があるため、横並び（inline）に戻す */
-            #syncStatusSummary {
-                display: inline;
-                margin-top: 0;
-                padding-left: 8px;
-            }
-        }
-
-    </style>
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="css/style.css">
+    
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
 </head>
 <body>
-    <div class="header">
-        <h1>コミュニケーション支援ツール</h1>
-        <div>
-            <!-- ★ 変更: ヘッダーに「設定を開く」ボタンを配置 -->
-            <a href="settings.html" target="_blank" class="settings-link-btn">⚙️ 設定・辞書</a>
+    <div id="nameEntryOverlay" class="name-entry-overlay">
+        <div class="name-entry-card">
+            <h2>👋 はじめに</h2>
+            <p>会話に参加するための名前を入力してください．．<br><small>（ニックネームでOKです）</small></p>
+            <input type="text" id="initialNameInput" placeholder="例：A先生，太郎...">
+            <button id="entryBtn">会話を始める</button>
         </div>
     </div>
 
-    <!-- ★ 追加: ここから分割レイアウト用の箱（ラッパー）で囲む -->
-    <div class="main-wrapper">
+    <div class="header">
+        <button id="mobileMenuBtn" class="mobile-menu-btn action-icon-btn">
+            <span class="icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
+                    <path d="M640-80v-90q-56-18-94-64t-44-106h80q8 43 40.5 71.5T700-240h120q25 0 42.5 17.5T880-180v100H640Zm120-200q-33 0-56.5-23.5T680-360q0-33 23.5-56.5T760-440q33 0 56.5 23.5T840-360q0 33-23.5 56.5T760-280ZM360-400q0-150 105-255t255-105v80q-117 0-198.5 81.5T440-400h-80Zm160 0q0-83 58.5-141.5T720-600v80q-50 0-85 35t-35 85h-80ZM80-520v-100q0-25 17.5-42.5T140-680h120q45 0 77.5-28.5T378-780h80q-6 60-44 106t-94 64v90H80Zm120-200q-33 0-56.5-23.5T120-800q0-33 23.5-56.5T200-880q33 0 56.5 23.5T280-800q0 33-23.5 56.5T200-720Z"/>
+                </svg>
+            </span>
+            <span class="text">通信設定</span>
+        </button>
+        
+        <h1>会話ノート</h1>
+        <div>
+            <button id="settingsBtn" class="settings-link-btn action-icon-btn">
+                <span class="icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
+                        <path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-1 13.5l103 78-110 190-119-50q-11 8-23 15t-24 12L590-80H370Zm70-80h80l12-96q21-9 37.5-19.5T599-301l91 38 40-68-79-60q4-14 6-27.5t2-29.5q0-16-2-29.5t-6-27.5l79-60-40-68-91 38q-14-15-30.5-25.5T532-704l-12-96h-80l-12 96q-21 9-37.5 19.5T361-659l-91-38-40 68 79 60q-4 14-6 27.5t-2 29.5q0 16 2 29.5t6 27.5l-79 60 40 68 91-38q14 15 30.5 25.5T428-256l12 96Zm40-220q42 0 71-29t29-71q0-42-29-71t-71-29q-42 0-71 29t-29 71q0 42 29 71t71 29Zm0-100Z"/>
+                    </svg>
+                </span>
+                <span class="text">設定・辞書</span>
+            </button>
+        </div>
+    </div>
 
-        <!-- ★ 変更: (オフライン)を改行し、入力欄などを細いパネルに合わせて縦並びに最適化 -->
-        <details class="sync-panel">
-            <!-- ★ 変更: スタイル指定をCSSに移動するため、HTMLをシンプルに -->
-            <summary class="sync-summary" style="line-height: 1.4;">
+    <div class="main-wrapper">
+        <div id="drawerOverlay" class="drawer-overlay"></div>
+        
+        <details class="sync-panel" id="syncPanel">
+            <summary class="sync-summary">
                 📡 通信・招待機能を開く 
                 <span id="syncStatusSummary">（オフライン）</span>
             </summary>
-            <div style="margin-top: 15px; border-top: 1px dashed #bbdefb; padding-top: 15px;">
-                
-                <div style="margin-bottom: 15px;">
-                    <div style="font-size: 0.9em; color: #555;">あなたのID:</div>
-                    <div id="myPeerId" class="sync-id" style="margin-bottom: 10px; word-break: break-all;">取得中...</div>
-                    <div style="display: flex; gap: 5px;">
-                        <button id="copyUrlBtn" class="invite-btn" style="display:none; margin:0; flex:1; padding: 6px 4px;">🔗 URLコピー</button>
-                        <button id="showQrBtn" class="invite-btn" style="display:none; margin:0; flex:1; padding: 6px 4px;">📱 QR表示</button>
+            <div class="sync-content">
+                <div class="my-id-area">
+                    <div class="label">あなたのID：</div>
+                    <div id="myPeerId" class="sync-id">取得中...</div>
+                    <div class="btn-group">
+                        <button id="copyUrlBtn" class="invite-btn" style="display:none;">🔗 URLコピー</button>
+                        <button id="showQrBtn" class="invite-btn" style="display:none;">📱 QRコード表示</button>
                     </div>
                 </div>
 
-                <!-- ★ 細い画面に合わせて width: 100% で縦に並べる -->
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <input type="text" id="myNameInput" placeholder="あなたの名前" style="width: 100%; padding: 8px;">
-                    <input type="text" id="targetPeerId" placeholder="相手のIDを入力" style="width: 100%; padding: 8px;">
-                    <button id="connectBtn" style="width: 100%; padding: 10px; font-size: 1em;">接続する</button>
+                <div class="connect-area">
+                    <input type="text" id="myNameInput" placeholder="あなたの名前">
+                    <input type="text" id="targetPeerId" placeholder="相手のIDを入力">
+                    <button id="connectBtn">接続する</button>
                 </div>
                 
-                <div id="syncStatus" style="width: 100%; font-size: 0.8em; color: #555; margin-top: 15px; text-align: center;">現在オフラインです</div>
+                <div id="syncStatus" class="status-text">現在オフラインです</div>
                 
                 <div id="qrContainer">
-                    <div style="font-size: 0.85em; color: #555; font-weight: bold;">相手のスマホカメラで<br>読み取ってください</div>
+                    <div class="qr-label">相手のカメラで読み取ってください</div>
                     <div id="qrcode"></div>
                 </div>
             </div>
         </details>
 
         <div class="chat-container">
-            <!-- ★ 変更: 会話ノートのヘッダーに環境音AIのスイッチを追加 -->
             <div class="chat-header">
-                <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-                    <h2>💬 会話ノート</h2>
-                    <label class="toggle-switch-label" style="font-size: 0.85em; background: #fff3e0; padding: 4px 10px; border-radius: 20px; border: 1px solid #ffcc80; color: #e65100;">
-                        <input type="checkbox" id="envSoundToggle"> 🔔 環境音AI
-                    </label>
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <button id="copyChatBtn" class="action-btn">📋 コピー</button>
-                    <button id="downloadChatBtn" class="action-btn">💾 保存</button>
-                    <button id="clearChatBtn" class="clear-btn">🗑️ リセット</button>
+                <div class="header-right" style="width: 100%; justify-content: flex-end;">
+                    <button id="copyChatBtn" class="action-btn action-icon-btn">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
+                                <path d="M360-240q-33 0-56.5-23.5T280-320v-480q0-33 23.5-56.5T360-880h360q33 0 56.5 23.5T800-800v480q0-33-23.5-56.5T720-240H360Zm0-80h360v-480H360v480ZM200-80q-33 0-56.5-23.5T120-160v-560h80v560h440v80H200Zm160-240v-480 480Z"/>
+                            </svg>
+                        </span>
+                        <span class="text">コピー</span>
+                    </button>
+                    <button id="downloadChatBtn" class="action-btn action-icon-btn">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
+                                <path d="M480-320 280-520l56-58 104 104v-326h80v326l104-104 56 58-200 200ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z"/>
+                            </svg>
+                        </span>
+                        <span class="text">保存</span>
+                    </button>
+                    <button id="clearChatBtn" class="clear-btn action-icon-btn">
+                        <span class="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="currentColor">
+                                <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+                            </svg>
+                        </span>
+                        <span class="text">リセット</span>
+                    </button>
                 </div>
             </div>
 
@@ -225,718 +120,116 @@
             <div id="typingIndicator" class="typing-indicator"></div>
             <div id="selectionPopup">📖 辞書に登録</div>
             
-            <div id="chatLog" class="chat-textarea" contenteditable="false" data-placeholder="ここに会話の履歴が表示されます..."></div>
+            <div id="chatLog" class="chat-textarea" data-placeholder="ここに会話の履歴が表示されます..."></div>
             <div id="sttInterim"></div>
 
             <div class="meter-container">
-                <span class="meter-label">🎤 マイク入力:</span>
+                <span class="meter-label">🎤 マイク入力：</span>
                 <div class="meter-bar-bg"><div id="volumeMeter" class="meter-bar-fill"></div></div>
             </div>
 
             <div class="input-row">
-                <button id="startBtn">🎤 聞き取り開始</button>
-                <button id="stopBtn" class="stop-btn" style="display:none;">⏹️ 停止</button>
-                <button id="waitBtn" class="wait-btn">🖐️ 待って</button>
-                <textarea id="ttsInput" rows="1" placeholder="返答を入力 (Enterで送信 / Shift+Enterで改行)"></textarea>
-                <button id="speakBtn">🗣️ 送信</button>
+                <button id="startBtn" class="action-icon-btn" aria-label="聞き取り開始">
+                    <span class="icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                        </svg>
+                    </span>
+                    <span class="text">聞き取り</span>
+                </button>
+
+                <button id="waitBtn" class="wait-btn action-icon-btn" aria-label="待って">
+                    <span class="icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor">
+                            <path d="M259-139q-99-99-99-241v-380q0-17 11.5-28.5T200-800q17 0 28.5 11.5T240-760v240h80v-320q0-17 11.5-28.5T360-880q17 0 28.5 11.5T400-840v320h80v-360q0-17 11.5-28.5T520-920q17 0 28.5 11.5T560-880v360h80v-280q0-17 11.5-28.5T680-840q17 0 28.5 11.5T720-800v230q-29 21-44.5 53T660-450v50h-50q-63 0-106.5 43.5T460-250v50h60v-50q0-38 26-64t64-26h110v-110q0-38 26-64t64-26h30v160q0 142-99 241T500-40q-142 0-241-99Z"/>
+                        </svg>
+                    </span>
+                    <span class="text">待って</span>
+                </button>
+
+                <textarea id="ttsInput" rows="1" placeholder="返答を入力（Enterで送信）"></textarea>
+                
+                <button id="speakBtn" class="action-icon-btn" aria-label="送信">
+                    <span class="icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                        </svg>
+                    </span>
+                    <span class="text">送信</span>
+                </button>
             </div>
         </div>
-
     </div>
-    <!-- ★ 追加: ここで箱（ラッパー）を閉じる -->
+
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal-content settings-container">
+            <div class="modal-header">
+                <h2>⚙️ 設定・辞書</h2>
+                <button id="closeSettingsBtn" class="close-icon-btn">✖</button>
+            </div>
+            <div id="saveToast">✅ 設定を保存しました</div>
+
+            <div class="section-title">便利機能</div>
+            <div class="settings-grid">
+                <div class="settings-item">
+                    <label>🔔 環境音AI（周囲の音を文字化）</label>
+                    <label class="env-toggle" style="display: inline-flex;">
+                        <input type="checkbox" id="envSoundToggle"> 環境音の監視をオンにする (注)動作が重くなるかも
+                    </label>
+                </div>
+            </div>
+            
+            <div class="section-title">文字と音声の調整</div>
+            <div class="settings-grid">
+                <div class="settings-item">
+                    <label>🔠 アプリの文字サイズ</label>
+                    <div class="font-controls">
+                        <button class="font-btn" id="fontIncreaseBtn">＋ 大きくする</button>
+                        <button class="font-btn" id="fontDecreaseBtn">－ 小さくする</button>
+                        <span class="font-status">現在のサイズ: <span id="currentFontSizeDisplay">16</span>px</span>
+                    </div>
+                </div>
+                <div class="settings-item">
+                    <label>🌙 ダークモード（ナイトモード）</label>
+                    <label class="env-toggle" style="display: inline-flex;">
+                        <input type="checkbox" id="darkModeToggle"> 暗いテーマを使用する
+                    </label>
+                </div>
+                <div class="settings-item">
+                    <label for="voiceSelect">👤 読み上げの声の種類</label>
+                    <select id="voiceSelect"></select>
+                </div>
+                <div class="settings-item">
+                    <label for="rateSlider">🏃 読み上げの速度: <span id="rateValue">1.0</span></label>
+                    <input type="range" id="rateSlider" min="0.5" max="2" value="1" step="0.1">
+                </div>
+                <div class="settings-item">
+                    <label for="pitchSlider">🎵 読み上げの高さ: <span id="pitchValue">1.0</span></label>
+                    <input type="range" id="pitchSlider" min="0" max="2" value="1" step="0.1">
+                </div>
+            </div>
+
+            <div class="section-title">📖 ユーザー辞書</div>
+            <div class="dict-input-row">
+                <input type="text" id="dictWrong" placeholder="誤認識される言葉">
+                <input type="text" id="dictCorrect" placeholder="正しい言葉">
+                <button id="addDictBtn">追加</button>
+            </div>
+            <ul id="dictList" class="dict-list"></ul>
+        </div>
+    </div>
+
+    <script src="js/webrtc.js"></script>
+    <script src="js/app.js"></script>
 
     <script>
-        // ★ Androidかどうかを判定
-        const isAndroid = /Android/i.test(navigator.userAgent);
-
-        // --- ★ 追加: Androidの「ピコン音(no-speech)」防止用の無音オシレーター ---
-        let silentAudioCtx = null;
-        function startSilentAudio() {
-            if (!isAndroid) return;
-            if (silentAudioCtx) return; // 既に動いていれば何もしない
-            
-            try {
-                silentAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = silentAudioCtx.createOscillator();
-                const gain = silentAudioCtx.createGain();
-                gain.gain.value = 0.0001; // 人間には聞こえない極小の音量
-                oscillator.connect(gain);
-                gain.connect(silentAudioCtx.destination);
-                oscillator.start();
-            } catch(e) {
-                console.log("無音オーディオの開始に失敗:", e);
-            }
-        }
-        
-        function stopSilentAudio() {
-            if (silentAudioCtx) {
-                silentAudioCtx.close();
-                silentAudioCtx = null;
-            }
-        }
-        // ------------------------------------------------------------------------
-                
-        // ★ 追加: 定期的に設定データ（フォントや辞書）を読み込み直す処理
-        // 別タブで設定が変更された時に、リアルタイムで反映させるための仕掛けです。
-        let customDictionary = JSON.parse(localStorage.getItem('userDictionary')) || {};
-        let currentFontSize = parseInt(localStorage.getItem('appFontSize')) || 16;
-        let savedTtsRate = parseFloat(localStorage.getItem('ttsRate')) || 1.0;
-        let savedTtsPitch = parseFloat(localStorage.getItem('ttsPitch')) || 1.0;
-        
-        function loadSettings() {
-            customDictionary = JSON.parse(localStorage.getItem('userDictionary')) || {};
-            
-            const newFontSize = parseInt(localStorage.getItem('appFontSize')) || 16;
-            if (newFontSize !== currentFontSize) {
-                currentFontSize = newFontSize;
-                document.documentElement.style.setProperty('--font-size', currentFontSize + 'px');
-            }
-
-            savedTtsRate = parseFloat(localStorage.getItem('ttsRate')) || 1.0;
-            savedTtsPitch = parseFloat(localStorage.getItem('ttsPitch')) || 1.0;
-        }
-        
-        // 1秒に1回、裏側でこっそり設定ファイルの変更をチェックする
-        setInterval(loadSettings, 1000);
-        document.documentElement.style.setProperty('--font-size', currentFontSize + 'px');
-
-        // --- 通信機能 ---
-        let peer = null;
-        let connections = [];
-        const myNameInput = document.getElementById('myNameInput');
-        
-        if (localStorage.getItem('myDisplayName')) myNameInput.value = localStorage.getItem('myDisplayName');
-        myNameInput.addEventListener('input', () => localStorage.setItem('myDisplayName', myNameInput.value));
-        function getMyName() { return myNameInput.value.trim() || '名無し'; }
-
-        let isMyTyping = false;
-        let typingTimeout = null;
-        const waitBtn = document.getElementById('waitBtn');
-        const typingIndicator = document.getElementById('typingIndicator');
-
-        // ★ 追加: 自分がホスト（部屋の作成者）かどうかを判定するフラグ
-        let isRoomHost = true;
-
-        waitBtn.onclick = () => {
-            isMyTyping = !isMyTyping;
-            if (isMyTyping) {
-                waitBtn.classList.add('active');
-                waitBtn.textContent = '🛑 入力中(解除)';
-                broadcastTypingState(true);
-            } else {
-                waitBtn.classList.remove('active');
-                waitBtn.textContent = '🖐️ 待って';
-                broadcastTypingState(false);
-            }
-        };
-
-        function broadcastTypingState(isTyping) {
-            const currentName = getMyName() === '名無し' ? '相手' : getMyName();
-            connections.forEach(conn => {
-                if (conn.open) conn.send({ type: 'typing', name: currentName, isTyping: isTyping });
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then((reg) => console.log('ServiceWorker 登録成功:', reg.scope))
+                    .catch((err) => console.log('ServiceWorker 登録失敗:', err));
             });
         }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedMessages = localStorage.getItem('chatMessages');
-            if (savedMessages) {
-                try {
-                    chatMessages = JSON.parse(savedMessages);
-                    renderMessages();
-                } catch(e) { chatMessages = []; }
-            }
-
-            if (isAndroid) document.querySelector('.meter-container').style.display = 'none';
-
-            peer = new Peer(); 
-            const urlParams = new URLSearchParams(window.location.search);
-            const inviteId = urlParams.get('room');
-            
-            peer.on('open', (id) => {
-                document.getElementById('myPeerId').textContent = id;
-                const currentUrl = window.location.origin + window.location.pathname;
-                const inviteUrl = currentUrl + '?room=' + id;
-                
-                const copyUrlBtn = document.getElementById('copyUrlBtn');
-                const showQrBtn = document.getElementById('showQrBtn');
-                const qrContainer = document.getElementById('qrContainer');
-                
-                copyUrlBtn.style.display = 'inline-block';
-                showQrBtn.style.display = 'inline-block';
-
-                copyUrlBtn.onclick = () => {
-                    navigator.clipboard.writeText(inviteUrl).then(() => {
-                        alert("招待URLをコピーしました！LINEやメールで相手に送ってください。\n\n" + inviteUrl);
-                    }).catch(() => { alert("コピーに失敗しました。手動でコピーしてください。\n" + inviteUrl); });
-                };
-
-                showQrBtn.onclick = () => {
-                    if (qrContainer.style.display === 'block') {
-                        qrContainer.style.display = 'none';
-                        showQrBtn.textContent = '📱 QR表示';
-                    } else {
-                        qrContainer.style.display = 'block';
-                        showQrBtn.textContent = '📱 閉じる';
-                        document.getElementById('qrcode').innerHTML = ''; 
-                        new QRCode(document.getElementById("qrcode"), {
-                            text: inviteUrl, width: 150, height: 150, colorDark : "#000000", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.M
-                        });
-                    }
-                };
-
-                if (inviteId && inviteId !== id) {
-                    isRoomHost = false; // ★ 追加: 招待URLから入った人は「ゲスト」になる
-                    document.getElementById('targetPeerId').value = inviteId;
-                    setTimeout(() => document.getElementById('connectBtn').click(), 800);
-                }
-            });
-
-            peer.on('connection', (conn) => setupConnection(conn));
-        });
-
-        document.getElementById('connectBtn').onclick = () => {
-            const targetId = document.getElementById('targetPeerId').value.trim();
-            if (!targetId) return;
-            isRoomHost = false; // ★ 追加: 自分からIDを入力して繋ぎに行く人は「ゲスト」になる
-            const conn = peer.connect(targetId);
-            setupConnection(conn);
-        };
-
-        function setupConnection(conn) {
-            conn.on('open', () => {
-                // 同じ接続が重複して登録されるのを防ぐ安全対策
-                if (!connections.includes(conn)) connections.push(conn);
-                document.getElementById('syncStatus').textContent = `✅ 接続完了（${connections.length}台と通信中）`;
-                document.getElementById('syncStatusSummary').textContent = `（✅ ${connections.length}台と通信中）`;
-                document.getElementById('targetPeerId').value = '';
-                
-                // ★ 変更: 接続直後は通信が不安定なため、0.4秒待ってから確実に履歴のキャッチボールを行う
-                setTimeout(() => {
-                    if (isRoomHost) {
-                        // 自分がホストなら、自分の履歴を相手に送る
-                        conn.send({ type: 'history', messages: chatMessages, isHost: true });
-                    } else {
-                        // 自分がゲストなら、ホストに「履歴をください」と要求する
-                        conn.send({ type: 'request_history' });
-                    }
-                }, 400);
-            });
-
-            conn.on('data', (data) => {
-                if (data.type === 'text') {
-                    const senderName = data.name || '相手';
-                    addMessage(senderName, data.text.trim(), 'remote');
-                    connections.forEach(c => { if (c !== conn && c.open) c.send(data); });
-                }
-                else if (data.type === 'request_history') {
-                    // ★ 追加: ゲストから「履歴をください」と言われたら、ホストとして履歴を送り返す
-                    if (isRoomHost) {
-                        conn.send({ type: 'history', messages: chatMessages, isHost: true });
-                    }
-                }
-                else if (data.type === 'history') {
-                    if (data.isHost) {
-                        const myCurrentName = getMyName() === '名無し' ? 'あなた' : getMyName();
-                        // 相手(ホスト)の履歴で完全に上書きする
-                        chatMessages = (data.messages || []).map(m => {
-                            if (m.name !== myCurrentName) return { name: m.name, text: m.text, type: 'remote' };
-                            return m; 
-                        });
-                        renderMessages();
-                        saveMessages();
-                    }
-                }
-                else if (data.type === 'typing') {
-                    if (data.isTyping) {
-                        typingIndicator.textContent = `🖐️ ${data.name} さんが入力中です... 少しお待ちください`;
-                        typingIndicator.style.display = 'block';
-                        clearTimeout(typingTimeout);
-                        typingTimeout = setTimeout(() => typingIndicator.style.display = 'none', 15000);
-                    } else {
-                        typingIndicator.style.display = 'none';
-                        clearTimeout(typingTimeout);
-                    }
-                    connections.forEach(c => { if (c !== conn && c.open) c.send(data); });
-                }
-            });
-
-            conn.on('close', () => {
-                connections = connections.filter(c => c !== conn);
-                const st = connections.length > 0 ? `✅ 接続完了（${connections.length}台と通信中）` : `現在オフラインです（1人で使用中）`;
-                document.getElementById('syncStatus').textContent = st;
-                document.getElementById('syncStatusSummary').textContent = connections.length > 0 ? `（✅ ${connections.length}台と通信中）` : `（オフライン）`;
-            });
-        }
-
-        function broadcastData(text) {
-            const currentName = getMyName(); 
-            connections.forEach(conn => { if (conn.open) conn.send({ type: 'text', text: text, name: currentName }); });
-        }
-
-        function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
-        }
-
-        // --- 辞書とテキスト置換 ---
-        function applyDictionary(text) {
-            let result = text;
-            for (const [wrong, correct] of Object.entries(customDictionary)) {
-                result = result.split(wrong).join(correct);
-            }
-            return result;
-        }
-
-        // --- チャットUI ---
-        const chatLog = document.getElementById('chatLog');
-        let chatMessages = []; 
-
-        const MSG_STYLES = {
-            tts:    { bg: '#e8f5e9', border: '#66bb6a', nameColor: '#2e7d32' }, 
-            stt:    { bg: '#e3f2fd', border: '#42a5f5', nameColor: '#1565c0' }, 
-            remote: { bg: '#fff3e0', border: '#ffa726', nameColor: '#e65100' }  
-        };
-
-        const REMOTE_PALETTES = [
-            { bg: '#fff3e0', border: '#ffa726', nameColor: '#e65100' }, { bg: '#fce4ec', border: '#f06292', nameColor: '#c2185b' },
-            { bg: '#e3f2fd', border: '#64b5f6', nameColor: '#1565c0' }, { bg: '#f3e5f5', border: '#ba68c8', nameColor: '#7b1fa2' },
-            { bg: '#e0f7fa', border: '#4dd0e1', nameColor: '#006064' }, { bg: '#fffde7', border: '#dce775', nameColor: '#827717' }
-        ];
-
-        function getColorForName(name) {
-            let hash = 0;
-            for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-            return REMOTE_PALETTES[Math.abs(hash) % REMOTE_PALETTES.length];
-        }
-
-        function addMessage(name, text, type) {
-            chatMessages.push({ name, text, type });
-            renderMessages();
-            saveMessages();
-        }
-
-        function renderMessages() {
-            chatLog.innerHTML = chatMessages.map((m, i) => {
-                let s = MSG_STYLES[m.type] || MSG_STYLES.stt;
-                if (m.type === 'remote') s = getColorForName(m.name);
-                const alignClass = m.type === 'remote' ? 'left' : 'right';
-
-                // ★ 追加: 1つ前のメッセージと同じ送信者かどうかを判定
-                const isSameSender = i > 0 && chatMessages[i - 1].name === m.name && chatMessages[i - 1].type === m.type;
-                
-                // ★ 変更: 同じ送信者の場合は名前のHTMLを出力しないようにする
-                const nameHtml = isSameSender ? '' : `<span class="msg-name" style="color:${s.nameColor};">${escapeHTML(m.name)}</span>`;
-
-                return `<div class="msg-row ${alignClass}">` +
-                       `<div class="msg-wrapper">` +
-                       nameHtml +
-                       `<div class="msg-bubble" data-index="${i}" style="background:${s.bg}; border: 1px solid ${s.border};">` +
-                       `<span class="msg-text">${escapeHTML(m.text)}</span>` +
-                       `</div></div></div>`;
-            }).join('');
-            chatLog.scrollTop = chatLog.scrollHeight;
-        }
-
-        function saveMessages() { localStorage.setItem('chatMessages', JSON.stringify(chatMessages)); }
-        function messagesToText() { return chatMessages.map(m => `${m.name}： ${m.text}`).join('\n'); }
-
-        document.getElementById('clearChatBtn').onclick = () => {
-            if(confirm("会話の履歴をすべて消去しますか？")) {
-                chatMessages = []; renderMessages(); localStorage.removeItem('chatMessages');
-            }
-        };
-
-        // --- 選択時ポップアップ ---
-        const selectionPopup = document.getElementById('selectionPopup');
-        let tempSelectedText = "";
-
-        chatLog.addEventListener('mouseup', (e) => {
-            const selectedText = window.getSelection().toString().trim();
-            if (selectedText) {
-                tempSelectedText = selectedText;
-                selectionPopup.style.left = (e.pageX - 50) + 'px';
-                selectionPopup.style.top = (e.pageY - 45) + 'px';
-                selectionPopup.style.display = 'block';
-            } else {
-                selectionPopup.style.display = 'none';
-            }
-        });
-
-        document.addEventListener('mousedown', (e) => {
-            if (e.target !== selectionPopup) {
-                setTimeout(() => { if (!window.getSelection().toString().trim()) selectionPopup.style.display = 'none'; }, 10);
-            }
-        });
-
-        selectionPopup.addEventListener('mousedown', (e) => {
-            e.preventDefault(); 
-            if (tempSelectedText) {
-                // ★ 変更: ポップアップの動作を「設定ページを新しいタブで開く」ように変更
-                // URLに文字をくっつけて送ることで、設定ページ側で自動入力させます。
-                const settingsUrl = 'settings.html?addWord=' + encodeURIComponent(tempSelectedText);
-                window.open(settingsUrl, '_blank');
-                selectionPopup.style.display = 'none';
-                window.getSelection().removeAllRanges(); 
-            }
-        });
-
-        // --- 音声合成 (TTS) ---
-        const synth = window.speechSynthesis;
-        let speakingQueueCount = 0; 
-
-        const speakBtn = document.getElementById('speakBtn');
-        const ttsInput = document.getElementById('ttsInput');
-
-        // --- ★ 変更: onboundaryに依存せず、句読点ごとに分割して確実なハイライトを行う仕組み ---
-        function speakAndLog() {
-            const rawText = ttsInput.value.trim();
-            if (!rawText) return;
-            if (isMyTyping) waitBtn.click();
-
-            // まずチャットログにメッセージを追加
-            const displayName = getMyName() === '名無し' ? 'あなた' : getMyName();
-            addMessage(displayName, rawText, 'tts');
-            ttsInput.value = '';
-            broadcastData(rawText);
-
-            const msgIndex = chatMessages.length - 1;
-            function getBubbleText() { return chatLog.querySelector(`.msg-bubble[data-index="${msgIndex}"] .msg-text`); }
-
-            // ★ 変更1: 句読点だけでなく、長すぎる文は強制的に細かく分割して確実にハイライトを動かす
-            let chunks = [];
-            const tempChunks = rawText.match(/.*?[、。，．！？\n\s]+|.+/g) || [rawText];
-            tempChunks.forEach(c => {
-                // 分割の基準を15文字から25文字に緩める
-                if (c.length > 25) {
-                    for (let i = 0; i < c.length; i += 25) {
-                        let part = c.slice(i, i + 25);
-                        // もし分割された結果が「。」などの記号だけになってしまったら、1つ前の塊に吸収させる
-                        if (part.match(/^[、。，．！？\n\s]+$/) && chunks.length > 0) {
-                            chunks[chunks.length - 1] += part;
-                        } else {
-                            chunks.push(part);
-                        }
-                    }
-                } else {
-                    chunks.push(c);
-                }
-            });
-            
-            let currentIndex = 0;
-            let charOffset = 0; // 読み上げ済みの文字数
-            let fallbackTimer = null; // スマホ特有の「止まるバグ」対策タイマー
-
-            function speakNextChunk() {
-                if (currentIndex >= chunks.length) {
-                    speakingQueueCount--;
-                    if (speakingQueueCount <= 0) { speakingQueueCount = 0; renderMessages(); } // ハイライト解除
-                    return;
-                }
-
-                const chunk = chunks[currentIndex];
-                const uttr = new SpeechSynthesisUtterance(chunk);
-                uttr.lang = 'ja-JP';
-                
-                const savedVoiceName = localStorage.getItem('ttsVoice');
-                if (savedVoiceName) {
-                    const voices = synth.getVoices().filter(v => v.lang.includes('ja'));
-                    const selectedVoice = voices.find(v => v.name === savedVoiceName);
-                    if (selectedVoice) uttr.voice = selectedVoice;
-                }
-                
-                uttr.rate = savedTtsRate;
-                uttr.pitch = savedTtsPitch;
-
-                // 次のフレーズへ進む処理（重複実行を防ぐ）
-                function proceedNext() {
-                    if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
-                    uttr.onend = null; uttr.onerror = null; 
-                    charOffset += chunk.length;
-                    currentIndex++;
-                    speakNextChunk();
-                }
-
-                // 読み上げ開始時の処理
-                uttr.onstart = () => {
-                    if (currentIndex === 0) speakingQueueCount++;
-                    const el = getBubbleText();
-                    if (!el) return;
-
-                    const hlStart = charOffset;
-                    const hlEnd = charOffset + chunk.length;
-
-                    // ★ 変更2: 全体を薄黄色にするのをやめ、読んでいる箇所「だけ」をハイライトする
-                    el.innerHTML = escapeHTML(rawText.slice(0, hlStart)) + 
-                        `<span class="tts-highlight-word">${escapeHTML(rawText.slice(hlStart, hlEnd))}</span>` + 
-                        escapeHTML(rawText.slice(hlEnd));
-
-                    // ★ 変更3: スマホで音声が止まったままになるバグを防ぐため、文字数に応じた時間で強制的に次へ進める
-                    const estimatedTime = (chunk.length * 300 / savedTtsRate) + 600;
-                    fallbackTimer = setTimeout(proceedNext, estimatedTime);
-                };
-
-                uttr.onend = proceedNext;
-                uttr.onerror = proceedNext;
-
-                // 連続再生によるバグを防ぐため、少しだけ待ってから再生
-                setTimeout(() => { synth.speak(uttr); }, 10);
-            }
-
-            speakNextChunk();
-        }
-        // ------------------------------------------------------------------------
-
-        speakBtn.onclick = speakAndLog;
-        ttsInput.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'; });
-        ttsInput.addEventListener('keydown', (e) => {
-            if (e.isComposing || e.keyCode === 229) return;
-            if (e.key === 'Enter') {
-                if (!e.shiftKey) {
-                    e.preventDefault(); speakAndLog();
-                    setTimeout(() => ttsInput.style.height = 'auto', 10);
-                }
-            }
-        });
-
-        // --- 音量メーター ---
-        const volumeMeter = document.getElementById('volumeMeter');
-        let audioContext; let analyser;
-        
-        async function initVolumeMeter() {
-            if (audioContext) return;
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 256;
-                const source = audioContext.createMediaStreamSource(stream);
-                source.connect(analyser);
-                const dataArray = new Uint8Array(analyser.frequencyBinCount);
-                
-                function updateMeter() {
-                    if (!isUserListening) { volumeMeter.style.width = '0%'; requestAnimationFrame(updateMeter); return; }
-                    analyser.getByteFrequencyData(dataArray);
-                    let sum = 0; for(let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-                    let average = sum / dataArray.length;
-                    let percent = Math.min(100, (average / 50) * 100);
-                    volumeMeter.style.width = percent + '%';
-                    if (percent > 80) volumeMeter.style.background = '#f44336';
-                    else if (percent > 10) volumeMeter.style.background = '#4caf50';
-                    else volumeMeter.style.background = '#8bc34a';
-                    requestAnimationFrame(updateMeter);
-                }
-                updateMeter();
-            } catch (err) { console.log("マイク音量取得失敗", err); }
-        }
-
-        // --- ★ 追加: YAMNet環境音認識機能の復活 ---
-        const envSoundToggle = document.getElementById('envSoundToggle');
-        const envSoundCaption = document.getElementById('envSoundCaption');
-        let isEnvSoundActive = false; let yamnetModel = null; let envAudioContext = null;
-        let audioProcessor = null; let envStream = null; let lastCaptionTime = 0;
-
-        const yamnetDict = {
-            16: "😄 笑い声", 18: "😢 泣き声", 20: "👶 赤ちゃんの泣き声", 55: "👏 拍手",
-            71: "🐶 犬の鳴き声", 72: "🐶 犬の鳴き声", 78: "🐱 猫の鳴き声", 80: "🐱 猫の鳴き声",
-            300: "🌧️ 雨の音", 318: "⏰ アラーム・警報", 322: "🚨 サイレン", 323: "🚑 救急車のサイレン",
-            324: "🚒 消防車のサイレン", 325: "🚓 パトカーのサイレン", 382: "🪟 ガラスの割れる音",
-            386: "🛎️ チャイム・インターホン", 388: "☎️ 電話の着信音", 393: "⏰ 目覚まし時計",
-            400: "🚪 ドアのノック", 430: "⌨️ タイピング音"
-        };
-
-        envSoundToggle.addEventListener('change', async (e) => {
-            isEnvSoundActive = e.target.checked;
-            if (isEnvSoundActive) {
-                showAudioCaption("⏳ AIモデル読込中...");
-                await startEnvironmentalSoundDetection();
-            } else {
-                stopEnvironmentalSoundDetection();
-            }
-        });
-
-        async function startEnvironmentalSoundDetection() {
-            try {
-                if (!yamnetModel) yamnetModel = await tf.loadGraphModel('https://tfhub.dev/google/tfjs-model/yamnet/tfjs/1', {fromTFHub: true});
-                envStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-                envAudioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-                const source = envAudioContext.createMediaStreamSource(envStream);
-                audioProcessor = envAudioContext.createScriptProcessor(2048, 1, 1);
-                source.connect(audioProcessor); audioProcessor.connect(envAudioContext.destination);
-
-                showAudioCaption("✅ 環境音の監視を開始しました");
-                setTimeout(() => { envSoundCaption.style.display = 'none'; }, 3500);
-
-                let audioBuffer = new Float32Array(16000); let bufferIndex = 0; let isPredicting = false;
-
-                audioProcessor.onaudioprocess = (e) => {
-                    if (!isEnvSoundActive || isPredicting) return;
-                    const inputData = e.inputBuffer.getChannelData(0);
-                    for (let i = 0; i < inputData.length; i++) if (bufferIndex < 8192) audioBuffer[bufferIndex++] = inputData[i];
-
-                    if (bufferIndex >= 8192) {
-                        isPredicting = true;
-                        const paddedSamples = new Float32Array(15600);
-                        paddedSamples.set(audioBuffer.slice(0, 8192));
-                        bufferIndex = 0; 
-                        setTimeout(() => {
-                            tf.tidy(() => {
-                                const inputTensor = tf.tensor1d(paddedSamples);
-                                const results = yamnetModel.execute(inputTensor);
-                                const scores = Array.isArray(results) ? results[0] : results;
-                                const maxScoresOverTime = scores.max(0);
-                                const topClass = maxScoresOverTime.argMax().dataSync()[0];
-                                const topScore = maxScoresOverTime.max().dataSync()[0];
-
-                                const now = Date.now();
-                                if (now - lastCaptionTime > 3000) {
-                                    if (topScore > 0.05 && yamnetDict[topClass]) {
-                                        showAudioCaption(`🔔 ${yamnetDict[topClass]}`); lastCaptionTime = now;
-                                    } else if (topScore > 0.05 && [49, 50, 51, 56, 57, 58, 424, 425].includes(topClass)) {
-                                        showAudioCaption(`👏 突発音（拍手・叩く音など）`); lastCaptionTime = now;
-                                    }
-                                }
-                            });
-                            isPredicting = false;
-                        }, 0);
-                    }
-                };
-            } catch (err) { alert("マイクの権限がないか、エラーが発生しました。"); envSoundToggle.checked = false; }
-        }
-
-        function stopEnvironmentalSoundDetection() {
-            if (audioProcessor) { audioProcessor.disconnect(); audioProcessor = null; }
-            if (envAudioContext) { envAudioContext.close(); envAudioContext = null; }
-            if (envStream) { envStream.getTracks().forEach(track => track.stop()); envStream = null; }
-            envSoundCaption.style.display = 'none';
-        }
-
-        function showAudioCaption(text) {
-            envSoundCaption.textContent = text; envSoundCaption.style.display = 'block';
-            envSoundCaption.style.animation = 'none'; envSoundCaption.offsetHeight; 
-            envSoundCaption.style.animation = 'fadeInOut 3s forwards';
-        }
-        // --------------------------------------------------------
-        // --- 文字起こし (STT) ---
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const sttInterim = document.getElementById('sttInterim');
-
-        let isUserListening = false; let isApiActive = false; let restartTimer = null; let recognition = null;
-
-        if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-            chatLog.innerText = "ブラウザが音声認識非対応です。"; startBtn.disabled = true;
-        } else {
-            function buildRecognition() {
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                const rec = new SpeechRecognition();
-                rec.lang = 'ja-JP'; 
-                rec.continuous = !isAndroid; // ★ 変更: Android特有の繰り返し増殖バグを防ぐため、Androidのみ false にする
-                rec.interimResults = true; 
-                rec.maxAlternatives = 1;
-
-                rec.onstart = () => { isApiActive = true; clearTimeout(restartTimer); restartTimer = null; };
-                
-                rec.onresult = (event) => {
-                    let interimTranscript = ''; let newFinal = '';
-                    for (let i = event.resultIndex; i < event.results.length; ++i) {
-                        if (event.results[i].isFinal) newFinal += event.results[i][0].transcript + '．\n\n';
-                        else interimTranscript += event.results[i][0].transcript;
-                    }
-
-                    newFinal = applyDictionary(newFinal);
-                    interimTranscript = applyDictionary(interimTranscript);
-
-                    const cleanedFinal = newFinal.replace(/[．。、，\s]+/g, '').trim();
-                    if (newFinal && cleanedFinal.length > 0) {
-                        const sttName = getMyName() === '名無し' ? 'あなた' : getMyName();
-                        if (speakingQueueCount === 0) addMessage(sttName, newFinal.trim(), 'tts');
-                        broadcastData(newFinal);
-                    }
-
-                    sttInterim.textContent = interimTranscript ? "👂 聞き取り中...： " + interimTranscript : "";
-                    const isFocused = (document.activeElement === chatLog);
-                    if (!isFocused && (newFinal || interimTranscript)) chatLog.scrollTop = chatLog.scrollHeight;
-                };
-
-                rec.onerror = (event) => {
-                    isApiActive = false;
-                    if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-                        isUserListening = false; startBtn.style.display = 'inline-block'; stopBtn.style.display = 'none';
-                        alert("マイクの使用が許可されていません。"); return;
-                    }
-                    if (event.error === 'aborted') return;
-                    scheduleRestart((event.error === 'audio-capture') ? 1000 : 250);
-                };
-
-                rec.onend = () => {
-                    isApiActive = false;
-                    if (!isUserListening) return;
-                    scheduleRestart(isAndroid ? 250 : 600);
-                };
-
-                return rec;
-            }
-
-            function scheduleRestart(delay = 600) {
-                if (!isUserListening || restartTimer !== null) return;
-                restartTimer = setTimeout(() => {
-                    restartTimer = null;
-                    if (!isUserListening || isApiActive) return;
-                    recognition = buildRecognition();
-                    try { recognition.start(); } catch(e) { scheduleRestart(1500); }
-                }, delay);
-            }
-
-            document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'visible' && isUserListening && !isApiActive) scheduleRestart(800);
-            });
-
-            // --- ★ 変更: マイクの開始と停止を1つのボタンで賢く切り替える（トグル処理） ---
-            startBtn.onclick = () => {
-                if (!isUserListening) {
-                    // 【開始の処理】
-                    isUserListening = true;
-                    
-                    // Android用: 無音を流してマイクが「無音だ」と勘違いしてピコンと鳴るのを防ぐ
-                    startSilentAudio(); 
-                    
-                    if (!isAndroid) initVolumeMeter(); 
-                    recognition = buildRecognition(); 
-                    try { recognition.start(); } catch(e) { scheduleRestart(); }
-                    
-                    startBtn.textContent = '👂 聞き取り中... (停止)';
-                    startBtn.classList.add('listening-active');
-                } else {
-                    // 【停止の処理】
-                    isUserListening = false; 
-                    clearTimeout(restartTimer); 
-                    restartTimer = null;
-                    
-                    stopSilentAudio(); // Androidの無音再生も止める
-
-                    if (recognition) { try { recognition.stop(); } catch(err) {} recognition = null; }
-                    sttInterim.textContent = ""; 
-                    
-                    startBtn.textContent = '🎤 聞き取り開始';
-                    startBtn.classList.remove('listening-active');
-                }
-            };
-            // ------------------------------------------------------------------------
-        }
-
-        // --- エクスポート ---
-        document.getElementById('copyChatBtn').onclick = () => {
-            if (!chatMessages.length) { alert("コピーする履歴がありません。"); return; }
-            navigator.clipboard.writeText(messagesToText()).then(() => alert("コピーしました！")).catch(() => alert("コピー失敗。"));
-        };
-
-        document.getElementById('downloadChatBtn').onclick = () => {
-            if (!chatMessages.length) { alert("保存する履歴がありません。"); return; }
-            const blob = new Blob([messagesToText()], { type: 'text/plain;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const date = new Date();
-            const filename = `会話記録_${date.getFullYear()}${String(date.getMonth()+1).padStart(2,'0')}${String(date.getDate()).padStart(2,'0')}_${String(date.getHours()).padStart(2,'0')}${String(date.getMinutes()).padStart(2,'0')}.txt`;
-            const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-        };
     </script>
 </body>
 </html>
