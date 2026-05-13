@@ -48,6 +48,23 @@ function initWebRTC() {
         document.getElementById('syncStatus').innerHTML = `${warnIcon} エラー`;
     });
 
+    // ★ 追加1: サーバーから一時的に切断された場合の自動復旧ロジック
+    peer.on('disconnected', () => {
+        console.warn("シグナリングサーバーから切断されました．再接続します．．．");
+        if (!peer.destroyed) {
+            // サーバーの負荷（連続アクセス制限）を避けるため、1秒待ってから再接続
+            setTimeout(() => peer.reconnect(), 1000);
+        }
+    });
+
+    // ★ 追加2: タブを閉じる・リロードする瞬間に、通信を完全に破棄して「ゾンビ接続」を防ぐ
+    window.addEventListener('beforeunload', () => {
+        // 繋がっている相手との通信をすべて明示的に切断
+        connections.forEach(conn => { if (conn.open) conn.close(); });
+        // シグナリングサーバーに完全切断を通知
+        if (peer && !peer.destroyed) peer.destroy(); 
+    });
+
     // ★ 追加: 接続ボタン自体の処理をここに登録しておく
     document.getElementById('connectBtn').onclick = () => {
         const targetId = document.getElementById('targetPeerId').value.trim();
