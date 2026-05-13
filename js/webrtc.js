@@ -60,13 +60,11 @@ function initWebRTC() {
             isRoomHost = false; 
             document.getElementById('targetPeerId').value = inviteId;
             
-            // ★ 追加: Safari等で接続が遅い場合に備え、画面にステータスを表示してユーザーを安心させる
+            // ★ 変更: 手動操作の案内を削除し、進行状況の表示のみにする
             const syncStatus = document.getElementById('syncStatus');
-            syncStatus.innerHTML = `<span style="color:#0d6efd; font-weight:bold;">招待を検知しました。<br>ホストに自動接続しています...</span>`;
-            
-            console.log("招待IDを検知: 接続を開始します...", inviteId);
-            // ★ 変更: Safariの準備遅れに対応するため、待機時間を1秒から2秒(2000)に延長
-            setTimeout(() => connectToPeer(inviteId), 2000);
+            if (syncStatus.textContent.includes('オフライン')) {
+                syncStatus.innerHTML = `<span style="color:#0d6efd;">入室処理中...</span>`;
+            }
         }
     });
 
@@ -105,15 +103,26 @@ function initWebRTC() {
         if (peer && !peer.destroyed) peer.destroy(); 
     });
 
-    // 手動接続ボタンの処理
-    document.getElementById('connectBtn').onclick = () => {
+    // ★ 変更: 手動接続ボタンの処理を async にし、Safari覚醒ハックを組み込む
+    document.getElementById('connectBtn').onclick = async () => {
         const targetId = document.getElementById('targetPeerId').value.trim();
         if (targetId) {
-            // ★ 追加: 手動で繋ぎに行った場合も、その相手をホストとしてURLを更新する
             activeRoomId = targetId; 
             setupInviteButtons(); 
-            // ★追加: ボタンを押した瞬間に文字を切り替える
-            document.getElementById('syncStatus').innerHTML = `<span style="color:#0d6efd;">接続を試みています...</span>`;
+            document.getElementById('syncStatus').innerHTML = `<span style="color:#0d6efd;">接続を準備中...</span>`;
+
+            // ★ 追加: SafariのWebRTCブロックを粉砕する「マイク一瞬起動ハック」の自動化
+            // ユーザーがボタンをタップした瞬間に実行することで、Safariの通信エンジンが100%覚醒します
+            if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    // エンジンを起こすのが目的なので、即座にストリームを停止してマイクをオフにする
+                    stream.getTracks().forEach(t => t.stop());
+                } catch(e) {
+                    console.warn("マイク権限が拒否されました（通信が不安定になる可能性があります）:", e);
+                }
+            }
+
             connectToPeer(targetId);
         }
     };

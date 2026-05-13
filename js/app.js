@@ -124,8 +124,15 @@ window.addEventListener('DOMContentLoaded', async () => { // ★ async を追加
     initUIEvents();
     initSelectionPopup();
 
-    // 2. 「会話を始める」ボタンが押された時の処理
-    // ★ 修正：entryBtn.onclick 内の演出を style.opacity に修正（fadeOutは存在しないプロパティのため）
+    // ★ 変更: ページ読み込み時に招待URLか判定し、ボタンの文字を自然に変える
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteId = urlParams.get('room');
+    if (inviteId) {
+        entryBtn.textContent = "会話に参加する";
+        document.getElementById('targetPeerId').value = inviteId; // 事前にIDをセットしておく
+    }
+
+    // 2. 「会話を始める/参加する」ボタンが押された時の処理
     entryBtn.onclick = async () => {
         const inputName = initialInput.value.trim();
         if (!inputName) {
@@ -139,6 +146,12 @@ window.addEventListener('DOMContentLoaded', async () => { // ★ async を追加
         nameOverlay.style.transition = "opacity 0.3s ease";
         nameOverlay.style.opacity = "0";
         setTimeout(() => nameOverlay.style.display = 'none', 300);
+
+        // ★ 追加: 招待URLから来た場合、ドロワーを開かずに裏側で「接続する」ボタンを自動で押す
+        // これにより、Safariの「ユーザー操作要求」をクリアしたまま接続プロセスに移行できます
+        if (inviteId) {
+            document.getElementById('connectBtn').click();
+        }
     };
 
     // Enterキーでも決定できるように
