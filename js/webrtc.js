@@ -1,6 +1,7 @@
 let peer = null;
 let connections = [];
 let isRoomHost = true; // デフォルトはホスト
+let activeRoomId = null; // ★ 追加: 現在参加している「大元のホスト」のIDを記憶する変数
 
 function initWebRTC() {
     // ★ 修正: Apple端末(Safari等)の厳しいネットワーク制限を越えるため、
@@ -18,14 +19,15 @@ function initWebRTC() {
 
     peer.on('open', (id) => {
         document.getElementById('myPeerId').textContent = id;
-        setupInviteButtons(id);
         
-        // ★ 変更: ボタンをクリックするのではなく、直接接続関数を呼ぶ
+        // ★ 修正: 招待URLから入った場合は「ホストのID」を、自分が作成した場合は「自分のID」を部屋のIDとする
+        activeRoomId = inviteId ? inviteId : id; 
+        setupInviteButtons(); // ★ 修正: 引数の id を削除する
+        
         if (inviteId && inviteId !== id) {
             isRoomHost = false; 
             document.getElementById('targetPeerId').value = inviteId;
             console.log("招待IDを検知: 接続を開始します...", inviteId);
-            // PeerJSが準備完了してから少し待って接続
             setTimeout(() => connectToPeer(inviteId), 1000);
         }
     });
@@ -65,12 +67,17 @@ function initWebRTC() {
         if (peer && !peer.destroyed) peer.destroy(); 
     });
 
-    // ★ 追加: 接続ボタン自体の処理をここに登録しておく
+    // 手動接続ボタンの処理
     document.getElementById('connectBtn').onclick = () => {
         const targetId = document.getElementById('targetPeerId').value.trim();
-        if (targetId) connectToPeer(targetId);
+        if (targetId) {
+            // ★ 追加: 手動で繋ぎに行った場合も、その相手をホストとしてURLを更新する
+            activeRoomId = targetId; 
+            setupInviteButtons(); 
+            connectToPeer(targetId);
+        }
     };
-}
+} // <-- initWebRTC関数の終わり
 
 // ★ 追加: ゲスト側から接続を開始する関数
 function connectToPeer(targetId) {
@@ -82,11 +89,15 @@ function connectToPeer(targetId) {
     setupConnection(conn);
 }
 
-function setupInviteButtons(id) {
-    const inviteUrl = window.location.origin + window.location.pathname + '?room=' + id;
+// ★ 修正: 引数 id を削除する
+function setupInviteButtons() {
+    // ★ 修正: 自分のIDではなく、記憶しておいた「ホストのID」をURLにする
+    const inviteUrl = window.location.origin + window.location.pathname + '?room=' + activeRoomId;
+    
     const copyBtn = document.getElementById('copyUrlBtn');
     const qrBtn = document.getElementById('showQrBtn');
     
+    // ... 以下は既存のコードそのまま ...    
     copyBtn.style.display = 'inline-block';
     qrBtn.style.display = 'inline-block';
 
