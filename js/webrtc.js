@@ -3,7 +3,16 @@ let connections = [];
 let isRoomHost = true; // デフォルトはホスト
 
 function initWebRTC() {
-    peer = new Peer();
+    // ★ 修正: Apple端末(Safari等)の厳しいネットワーク制限を越えるため、
+    // Googleの公共STUNサーバーを明示的に指定して通信の安定性を高める
+    peer = new Peer({
+        config: {
+            'iceServers': [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        }
+    });
     const urlParams = new URLSearchParams(window.location.search);
     const inviteId = urlParams.get('room');
 
