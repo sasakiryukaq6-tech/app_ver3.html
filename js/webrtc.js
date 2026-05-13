@@ -10,7 +10,8 @@ function initWebRTC() {
         config: {
             'iceServers': [
                 { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun.stunprotocol.org:3478' } // ★ 追加: 予備のSTUNサーバー
             ]
         }
     });
@@ -19,16 +20,20 @@ function initWebRTC() {
 
     peer.on('open', (id) => {
         document.getElementById('myPeerId').textContent = id;
-        
-        // ★ 修正: 招待URLから入った場合は「ホストのID」を、自分が作成した場合は「自分のID」を部屋のIDとする
         activeRoomId = inviteId ? inviteId : id; 
-        setupInviteButtons(); // ★ 修正: 引数の id を削除する
+        setupInviteButtons(); 
         
         if (inviteId && inviteId !== id) {
             isRoomHost = false; 
             document.getElementById('targetPeerId').value = inviteId;
+            
+            // ★ 追加: Safari等で接続が遅い場合に備え、画面にステータスを表示してユーザーを安心させる
+            const syncStatus = document.getElementById('syncStatus');
+            syncStatus.innerHTML = `<span style="color:#0d6efd; font-weight:bold;">招待を検知しました。<br>ホストに自動接続しています...</span>`;
+            
             console.log("招待IDを検知: 接続を開始します...", inviteId);
-            setTimeout(() => connectToPeer(inviteId), 1000);
+            // ★ 変更: Safariの準備遅れに対応するため、待機時間を1秒から2秒(2000)に延長
+            setTimeout(() => connectToPeer(inviteId), 2000);
         }
     });
 
