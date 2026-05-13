@@ -1,5 +1,5 @@
 // ★ バージョン名を変更してキャッシュを更新させる
-const CACHE_NAME = 'comm-tool-cache-v36';
+const CACHE_NAME = 'comm-tool-cache-v37';
 
 // ★ 外部のライブラリやフォントもすべてキャッシュのリストに加える
 const urlsToCache = [
