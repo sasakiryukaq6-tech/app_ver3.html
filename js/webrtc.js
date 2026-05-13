@@ -124,8 +124,10 @@ function connectToPeer(targetId) {
         }
     }, 10000);
 
-    // ★ 変更: Safariでエラーを引き起こす { reliable: true } を削除し、シンプルに接続する
-    const conn = peer.connect(targetId);
+    // ★ 変更: Safariがクラッシュしないよう、通信データの形式を明示的に 'json' に指定する
+    const conn = peer.connect(targetId, {
+        serialization: 'json'
+    });
     
     setupConnection(conn);
 }
