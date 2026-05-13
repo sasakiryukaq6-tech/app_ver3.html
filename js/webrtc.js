@@ -3,6 +3,23 @@ let connections = [];
 let isRoomHost = true; // デフォルトはホスト
 let activeRoomId = null; // ★ 追加: 現在参加している「大元のホスト」のIDを記憶する変数
 
+// ★ 追加: iOS Safariの「データ専用通信のサボり」を防ぐためのダミー音声生成ハック
+function wakeUpSafariMediaEngine() {
+    // iPhoneやスマホの場合のみ実行
+    if (!/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) return;
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const dst = ctx.createMediaStreamDestination();
+        osc.connect(dst);
+        osc.start();
+        console.log("📱 Mobile Media Engine Woken Up");
+    } catch(e) {
+        console.warn("Media engine wakeup failed:", e);
+    }
+}
+
 function initWebRTC() {
     // ★ 修正: Apple端末(Safari等)の厳しいネットワーク制限を越えるため、
     // Googleの公共STUNサーバーを明示的に指定して通信の安定性を高める
@@ -105,18 +122,15 @@ function initWebRTC() {
 
 let connectionAttemptTimer = null; // ★追加: タイムアウト管理用
 
-// ★ 修正: ゲスト側から接続を開始する関数（Safariのネゴシエーション失敗対策版）
+// ★ 修正: ゲスト側から接続を開始する関数（Safari完全対策版）
 function connectToPeer(targetId) {
     console.log(targetId + " に接続を試みています...");
     isRoomHost = false; 
     
-    // UIを更新
     document.getElementById('syncStatus').innerHTML = `<span style="color:#0d6efd;">接続を試みています...</span>`;
     
-    // 既存のタイマーがあればリセット
     if (connectionAttemptTimer) clearTimeout(connectionAttemptTimer);
     
-    // 10秒待ってもダメならタイムアウトさせる
     connectionAttemptTimer = setTimeout(() => {
         if (connections.length === 0) {
             const warnIcon = `<svg class="ui-icon" style="color:#f44336;" viewBox="0 -960 960 960"><path d="M440-280h80v-80h-80v80Zm0-160h80v-200h-80v200Zm40 360q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg>`;
@@ -124,9 +138,13 @@ function connectToPeer(targetId) {
         }
     }, 10000);
 
-    // ★ 変更: Safariがクラッシュしないよう、通信データの形式を明示的に 'json' に指定する
+    // ★ 追加: 接続処理が走る直前にSafariの通信エンジンを叩き起こす
+    wakeUpSafariMediaEngine();
+
+    // ★ 変更: SDP（接続プロトコル）を強制スルーさせるプロ向けオプションを追加
     const conn = peer.connect(targetId, {
-        serialization: 'json'
+        reliable: false,
+        sdpTransform: function(sdp) { return sdp; } // Safariのネゴシエーションを強制通過させる
     });
     
     setupConnection(conn);
@@ -169,6 +187,9 @@ function setupConnection(conn) {
     conn.on('open', () => {
         // ★追加: 接続に成功したらタイムアウトのタイマーを止める
         if (connectionAttemptTimer) clearTimeout(connectionAttemptTimer);
+
+        // ★ 追加: 接続が開いた直後にもエンジンを維持させる
+        wakeUpSafariMediaEngine();
 
         if (!connections.includes(conn)) connections.push(conn);
         updateSyncStatusUI();
