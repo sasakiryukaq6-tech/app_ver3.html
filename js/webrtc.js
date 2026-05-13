@@ -105,7 +105,7 @@ function initWebRTC() {
 
 let connectionAttemptTimer = null; // ★追加: タイムアウト管理用
 
-// ★ 修正: ゲスト側から接続を開始する関数（フリーズ防止対策版）
+// ★ 修正: ゲスト側から接続を開始する関数（Safariのネゴシエーション失敗対策版）
 function connectToPeer(targetId) {
     console.log(targetId + " に接続を試みています...");
     isRoomHost = false; 
@@ -116,7 +116,7 @@ function connectToPeer(targetId) {
     // 既存のタイマーがあればリセット
     if (connectionAttemptTimer) clearTimeout(connectionAttemptTimer);
     
-    // ★追加: 10秒待ってもダメならタイムアウトさせる（永遠に止まるのを防ぐ）
+    // 10秒待ってもダメならタイムアウトさせる
     connectionAttemptTimer = setTimeout(() => {
         if (connections.length === 0) {
             const warnIcon = `<svg class="ui-icon" style="color:#f44336;" viewBox="0 -960 960 960"><path d="M440-280h80v-80h-80v80Zm0-160h80v-200h-80v200Zm40 360q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg>`;
@@ -124,7 +124,9 @@ function connectToPeer(targetId) {
         }
     }, 10000);
 
-    const conn = peer.connect(targetId, { reliable: true });
+    // ★ 変更: Safariでエラーを引き起こす { reliable: true } を削除し、シンプルに接続する
+    const conn = peer.connect(targetId);
+    
     setupConnection(conn);
 }
 
