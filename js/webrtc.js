@@ -79,18 +79,35 @@ function initWebRTC() {
             // ★ 追加: 手動で繋ぎに行った場合も、その相手をホストとしてURLを更新する
             activeRoomId = targetId; 
             setupInviteButtons(); 
+            // ★追加: ボタンを押した瞬間に文字を切り替える
+            document.getElementById('syncStatus').innerHTML = `<span style="color:#0d6efd;">接続を試みています...</span>`;
             connectToPeer(targetId);
         }
     };
 } // <-- initWebRTC関数の終わり
 
-// ★ 追加: ゲスト側から接続を開始する関数
+let connectionAttemptTimer = null; // ★追加: タイムアウト管理用
+
+// ★ 修正: ゲスト側から接続を開始する関数（フリーズ防止対策版）
 function connectToPeer(targetId) {
     console.log(targetId + " に接続を試みています...");
-    isRoomHost = false; // 自分から繋ぎに行く場合はゲスト
-    const conn = peer.connect(targetId, {
-        reliable: true
-    });
+    isRoomHost = false; 
+    
+    // UIを更新
+    document.getElementById('syncStatus').innerHTML = `<span style="color:#0d6efd;">接続を試みています...</span>`;
+    
+    // 既存のタイマーがあればリセット
+    if (connectionAttemptTimer) clearTimeout(connectionAttemptTimer);
+    
+    // ★追加: 10秒待ってもダメならタイムアウトさせる（永遠に止まるのを防ぐ）
+    connectionAttemptTimer = setTimeout(() => {
+        if (connections.length === 0) {
+            const warnIcon = `<svg class="ui-icon" style="color:#f44336;" viewBox="0 -960 960 960"><path d="M440-280h80v-80h-80v80Zm0-160h80v-200h-80v200Zm40 360q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg>`;
+            document.getElementById('syncStatus').innerHTML = `${warnIcon} 接続タイムアウト<br><span style="font-size:0.85em; color:#666;">※Safariの制限か電波が原因です。もう一度「接続する」を押してください。</span>`;
+        }
+    }, 10000);
+
+    const conn = peer.connect(targetId, { reliable: true });
     setupConnection(conn);
 }
 
@@ -129,6 +146,9 @@ function setupInviteButtons() {
 
 function setupConnection(conn) {
     conn.on('open', () => {
+        // ★追加: 接続に成功したらタイムアウトのタイマーを止める
+        if (connectionAttemptTimer) clearTimeout(connectionAttemptTimer);
+
         if (!connections.includes(conn)) connections.push(conn);
         updateSyncStatusUI();
         
@@ -203,6 +223,15 @@ function setupConnection(conn) {
     conn.on('close', () => {
         connections = connections.filter(c => c !== conn);
         updateSyncStatusUI();
+    });
+
+    // ★追加: 接続ごとの個別エラーをキャッチし、永遠に固まるのを防ぐ
+    conn.on('error', (err) => {
+        console.warn("Connection Error:", err);
+        if (connectionAttemptTimer) clearTimeout(connectionAttemptTimer);
+        connections = connections.filter(c => c !== conn);
+        updateSyncStatusUI();
+        document.getElementById('syncStatus').innerHTML = `<span style="color:#f44336;">接続が切断されました（エラー）</span>`;
     });
 }
 
