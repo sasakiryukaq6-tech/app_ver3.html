@@ -7,6 +7,7 @@ function initWebRTC() {
     // ★ 修正: Apple端末(Safari等)の厳しいネットワーク制限を越えるため、
     // Googleの公共STUNサーバーを明示的に指定して通信の安定性を高める
     peer = new Peer({
+        debug: 3,
         config: {
             'iceServers': [
                 { urls: 'stun:stun.l.google.com:19302' },
