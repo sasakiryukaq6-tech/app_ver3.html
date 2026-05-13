@@ -7,12 +7,28 @@ function initWebRTC() {
     // ★ 修正: Apple端末(Safari等)の厳しいネットワーク制限を越えるため、
     // Googleの公共STUNサーバーを明示的に指定して通信の安定性を高める
     peer = new Peer({
-        debug: 3,
+        debug: 3, 
         config: {
             'iceServers': [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun.stunprotocol.org:3478' } // ★ 追加: 予備のSTUNサーバー
+                // ★ 追加: 直接通信がブロックされた場合の「最終兵器」として、
+                // データを強制的に中継するTURNサーバーを指定する
+                {
+                    urls: 'turn:openrelay.metered.ca:80',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:443',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                }
             ]
         }
     });
