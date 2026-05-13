@@ -13,7 +13,7 @@ const urlsToCache = [
     './icon-192.png',
     './icon-512.png',
     // 外部CDNライブラリ群
-    'https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js',
+    'https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js',
     'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs',
     'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
     'https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js',
