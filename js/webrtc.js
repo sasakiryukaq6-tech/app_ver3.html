@@ -150,11 +150,19 @@ function setupConnection(conn) {
             // 受信したメッセージは「remote」として扱う
             addMessage(data.name || '相手', data.text.trim(), 'remote');
             
-            // ★ 追加: 自分がホスト（部屋の作成者）なら、送信元以外の全員（他のゲスト）にメッセージを中継する
+            // ★ ここを以下の「ゾンビ接続対策版」に書き換えます
             if (isRoomHost) {
-                connections.forEach(c => {
-                    // 送信してきた人以外で、接続が開いている人にだけ転送
-                    if (c !== conn && c.open) c.send(data);
+                connections = connections.filter(c => {
+                    if (c === conn) return true; // 送信元は維持
+                    if (!c.open) return false;   // 既に閉じているものはリストから除外
+                    try { 
+                        c.send(data); 
+                        return true; 
+                    } catch (e) { 
+                        console.warn("送信失敗、ゾンビ接続を切断:", e);
+                        c.close(); 
+                        return false; // エラーが起きた接続はリストから削除
+                    }
                 });
             }
         }
@@ -204,14 +212,26 @@ function updateSyncStatusUI() {
     document.getElementById('syncStatusSummary').innerHTML = count > 0 ? `(${checkIcon} ${count}台)` : `(オフライン)`;
 }
 
-// app.jsから呼ばれる関数
+// app.jsから呼ばれる関数（ゾンビ接続対策版）
 function broadcastData(text) {
     const name = window.getMyName ? window.getMyName() : '名無し';
-    connections.forEach(conn => { if (conn.open) conn.send({ type: 'text', text, name }); });
+    connections = connections.filter(c => {
+        if (!c.open) return false;
+        try { 
+            c.send({ type: 'text', text, name }); 
+            return true; 
+        } catch (e) { 
+            c.close(); return false; 
+        }
+    });
 }
 
 function broadcastTypingState(isTyping) {
     const name = window.getMyName ? window.getMyName() : '名無し';
     const currentName = name === '名無し' ? '相手' : name;
-    connections.forEach(conn => { if (conn.open) conn.send({ type: 'typing', name: currentName, isTyping }); });
+    connections.forEach(conn => { 
+        if (conn.open) {
+            try { conn.send({ type: 'typing', name: currentName, isTyping }); } catch (e) {} 
+        }
+    });
 }

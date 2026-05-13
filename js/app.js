@@ -609,11 +609,19 @@ function scheduleRestart(delay = 600) {
     }, delay);
 }
 
+// --- 音声認識 (STT) 停止処理 ---
 function stopSTT() { 
-    if(recognition) recognition.stop(); 
+    if(recognition) {
+        // ★ 修正: 既に停止済みの際に発生するエラーを無視する保護回路
+        try { 
+            recognition.stop(); 
+        } catch(e) { 
+            console.warn("STT停止エラー回避:", e); 
+        }
+    }
     clearTimeout(restartTimer);
     restartTimer = null;
-    sttInterim.textContent = ""; 
+    sttInterim.innerHTML = ""; // 修正: textContent から innerHTML に統一
 }
 
 function applyDictionary(t) {
