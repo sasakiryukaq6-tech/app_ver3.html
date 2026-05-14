@@ -283,6 +283,16 @@
                 navigator.serviceWorker.register('./sw.js')
                     .then((reg) => console.log('ServiceWorker 登録成功:', reg.scope))
                     .catch((err) => console.log('ServiceWorker 登録失敗:', err));
+                
+                // ★ 追加: Service Workerのバージョンが更新された（新しい金庫に入れ替わった）瞬間を検知する
+                let refreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    // 更新ループに陥らないように1回だけ自動リロードを実行し、最新の画面を強制的にユーザーに見せる
+                    if (!refreshing) {
+                        refreshing = true;
+                        window.location.reload();
+                    }
+                });
             });
         }
     </script>

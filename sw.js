@@ -47,23 +47,19 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// ★ 修正: Stale-While-Revalidate 戦略による完全なオフライン対応と自動アップデートの両立
+// ★ 修正: Stale-While-Revalidate 戦略から「Network First（最新優先）戦略」に変更
+// オンラインなら必ず最新のファイルをネットワークから取得し、圏外の時だけキャッシュを使います
 self.addEventListener('fetch', (event) => {
     event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-            // 裏側でネットワークから最新版を取得し、キャッシュを上書きする処理
-            const fetchPromise = fetch(event.request).then((networkResponse) => {
-                caches.open(CACHE_NAME).then((cache) => {
-                    // 次回アクセスのために最新版を保存しておく
-                    cache.put(event.request, networkResponse.clone());
-                });
+        fetch(event.request).then((networkResponse) => {
+            // ネットワーク通信成功時：最新のファイルをキャッシュに保存してから画面に返す
+            return caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, networkResponse.clone());
                 return networkResponse;
-            }).catch(() => {
-                // オフライン時は何もしない（エラーを出さない）
             });
-
-            // キャッシュがあれば一瞬で画面に表示し、なければネットワーク取得を待つ
-            return cachedResponse || fetchPromise;
+        }).catch(() => {
+            // オフライン（圏外）またはエラー時：保存しておいたキャッシュを返す
+            return caches.match(event.request);
         })
     );
 });
