@@ -7,6 +7,7 @@ let customDictionary = {};
 let currentFontSize = 14;
 let savedTtsRate = 1.0;
 let savedTtsPitch = 1.0;
+let isTtsEnabled = true; // ★ 追加: 読み上げのオン・オフを管理する変数（デフォルトはオン）
 
 // YAMNet関連
 let isEnvSoundActive = false;
@@ -15,8 +16,10 @@ let envAudioContext = null;
 let workletNode = null;
 let envStream = null;
 let lastCaptionTime = 0;
-let isTtsSpeaking = false; // ★ 追加: 自分の端末が読み上げ中かどうかを判定するフラグ
-let isSettingsInitialized = false; // ★ 追加: 設定画面の多重初期化を防ぐフラグ
+let isTtsSpeaking = false; // 自分の端末が読み上げ中かどうかを判定するフラグ
+let isSettingsInitialized = false; // 設定画面の多重初期化を防ぐフラグ
+let ttsQueue = []; // 読み上げ待ちのテキストを並べておく行列
+let isTtsProcessing = false; // 現在キューを処理（読み上げ）中かどうか
 
 const isAndroid = /Android/i.test(navigator.userAgent);
 
@@ -53,29 +56,55 @@ function getColorForName(name) {
     return assignedColors[name];
 }
 
+// ★ 追加: webrtc.js（参加者リストの描画）からも色を取得できるように window オブジェクトに公開する
+window.getColorForName = getColorForName;
+
+// ★ 追加: 警告トーストをコントロールするグローバル関数
+window.showWarningToast = function(msg, autoHide = false) {
+    const t = document.getElementById('warningToast');
+    if (!t) return;
+    t.innerHTML = msg;
+    t.style.display = 'block';
+    if (autoHide) {
+        setTimeout(() => t.style.display = 'none', 3000);
+    }
+};
+window.hideWarningToast = function() {
+    const t = document.getElementById('warningToast');
+    if (t) t.style.display = 'none';
+};
+
 // --- 修正: 確実にHTMLを読み込んでから要素を取得するように変更 ---
 let chatLog, sttInterim, ttsInput;
 
 // --- 初期化 ---
-window.addEventListener('DOMContentLoaded', async () => { // ★ async を追加
+window.addEventListener('DOMContentLoaded', async () => { 
     chatLog = document.getElementById('chatLog');
     sttInterim = document.getElementById('sttInterim');
     ttsInput = document.getElementById('ttsInput');
 
-    // ★ 変更：名前入力に関連する要素を先に取得
     const nameOverlay = document.getElementById('nameEntryOverlay');
     const initialInput = document.getElementById('initialNameInput');
     const entryBtn = document.getElementById('entryBtn');
     const myNameInput = document.getElementById('myNameInput');
 
-    // ★ 推奨：Peer通信や設定読み込みよりも前に、まず名前を確定させる
+    // ★ 追加: 記憶された名前の処理よりも前に、まず招待URLかどうかを判定する
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteId = urlParams.get('room');
+
+    // ★ 修正: 記憶された名前の復元と、画面スキップの条件分岐
     const savedName = await localforage.getItem('myDisplayName');
     if (savedName && savedName !== '名無し') {
-        nameOverlay.style.display = 'none'; 
-        myNameInput.value = savedName; // ★ 修正：保存されていた名前を画面の入力欄に反映
+        myNameInput.value = savedName;
+        initialInput.value = savedName; // 画面中央の入力欄にも記憶した名前をセットしておく
+        
+        // ★ 追加: 招待URLから来た場合は、Safariの通信制限を突破する「ユーザーのタップ操作」を
+        // 確実に獲得するため、あえて最初の画面をスキップせずに「参加ボタン」を押してもらう
+        if (!inviteId) {
+            nameOverlay.style.display = 'none'; 
+        }
     }
 
-    // ★ 追加: 音声合成エンジンを早期に起動させてリスト取得の遅延（空っぽになるバグ）を防ぐ
     if (window.speechSynthesis) window.speechSynthesis.getVoices();
 
     // ★ 修正: 設定の読み込みが終わるのを待つ
@@ -124,31 +153,28 @@ window.addEventListener('DOMContentLoaded', async () => { // ★ async を追加
     initUIEvents();
     initSelectionPopup();
 
-    // ★ 変更: ページ読み込み時に招待URLか判定し、ボタンの文字を自然に変える
-    const urlParams = new URLSearchParams(window.location.search);
-    const inviteId = urlParams.get('room');
     if (inviteId) {
         entryBtn.textContent = "会話に参加する";
         document.getElementById('targetPeerId').value = inviteId; // 事前にIDをセットしておく
     }
 
     // 2. 「会話を始める/参加する」ボタンが押された時の処理
-    entryBtn.onclick = async () => {
+    // ★ 修正: async と await を外し、Safariの「ユーザー操作によるマイク起動」の権限を維持する
+    entryBtn.onclick = () => {
         const inputName = initialInput.value.trim();
         if (!inputName) {
             alert('名前を入力してください．．');
             return;
         }
 
-        await localforage.setItem('myDisplayName', inputName);
+        // 保存は裏側で走らせておく（awaitで待たない）
+        localforage.setItem('myDisplayName', inputName);
         myNameInput.value = inputName;
         
         nameOverlay.style.transition = "opacity 0.3s ease";
         nameOverlay.style.opacity = "0";
         setTimeout(() => nameOverlay.style.display = 'none', 300);
 
-        // ★ 追加: 招待URLから来た場合、ドロワーを開かずに裏側で「接続する」ボタンを自動で押す
-        // これにより、Safariの「ユーザー操作要求」をクリアしたまま接続プロセスに移行できます
         if (inviteId) {
             document.getElementById('connectBtn').click();
         }
@@ -157,11 +183,13 @@ window.addEventListener('DOMContentLoaded', async () => { // ★ async を追加
     // Enterキーでも決定できるように
     initialInput.onkeydown = (e) => { if(e.key === 'Enter') entryBtn.click(); };
 
-    // ★追加: 通信パネル（左ドロワー）で名前を変更した時にも、新しい名前を保存する
+    // 通信パネル（左ドロワー）で名前を変更した時にも、新しい名前を保存する
     myNameInput.addEventListener('input', async () => {
         const newName = myNameInput.value.trim();
         if (newName) {
             await localforage.setItem('myDisplayName', newName);
+            // ★ 追加: 名前が変わったことを直ちに通信相手に知らせる
+            if (window.notifyNameChange) window.notifyNameChange();
         }
     });
 });
@@ -172,6 +200,10 @@ async function loadSettings() {
     currentFontSize = parseInt(await localforage.getItem('appFontSize')) || 14;
     savedTtsRate = parseFloat(await localforage.getItem('ttsRate')) || 1.0;
     savedTtsPitch = parseFloat(await localforage.getItem('ttsPitch')) || 1.0;
+    
+    // ★ 追加: 保存された設定を読み込む（初めて使う時＝保存データがない時は true にする）
+    const storedTtsEnabled = await localforage.getItem('ttsEnabled');
+    isTtsEnabled = storedTtsEnabled === null ? true : storedTtsEnabled;
     
     document.documentElement.style.setProperty('--font-size', currentFontSize + 'px');
     
@@ -190,15 +222,6 @@ window.addMessage = function(name, text, type) {
     const msgObj = { name, text, type };
     window.chatMessages.push(msgObj);
     appendMessageToDOM(msgObj, index);
-    saveMessages();
-};
-
-window.syncHistory = function(messages) {
-    const myName = window.getMyName();
-    window.chatMessages = (messages || []).map(m => {
-        return m.name !== myName ? { name: m.name, text: m.text, type: 'remote' } : m;
-    });
-    renderAllMessages();
     saveMessages();
 };
 
@@ -437,20 +460,19 @@ function initUIEvents() {
                 panel.classList.remove('active'); 
                 overlay.classList.remove('active');
                 // 変更: アイコン付きに戻す
-                menuBtn.innerHTML = connectSvg + '<span class="text">通信設定</span>';
+                menuBtn.innerHTML = connectSvg + '<span class="text">通信機能</span>';
             } else {
                 // 閉じている状態なら開く
                 panel.classList.add('active'); 
                 overlay.classList.add('active'); 
-                panel.open = true; 
-                // 変更: 閉じるアイコンに切り替え
+                // ★ 修正: panel.open = true; は details 要素ではなくなったので削除
                 menuBtn.innerHTML = closeSvg + '<span class="text">閉じる</span>';
             }
         };
         overlay.onclick = () => { 
             panel.classList.remove('active'); 
             overlay.classList.remove('active');
-            menuBtn.innerHTML = connectSvg + '<span class="text">通信設定</span>';
+            menuBtn.innerHTML = connectSvg + '<span class="text">通信機能</span>';
         };
     }
 
@@ -566,13 +588,20 @@ function startSTT() {
     recognition.onstart = () => { isApiActive = true; clearTimeout(restartTimer); restartTimer = null; };
 
     recognition.onresult = (e) => {
-        // ★ 追加: 自分が読み上げている最中の音声は拾わずにすべて破棄する（エコー防止）
+        // 自分が読み上げている最中の音声は拾わずにすべて破棄する（エコー防止）
         if (isTtsSpeaking) return;
 
         let interim = ''; let final = '';
         for (let i = e.resultIndex; i < e.results.length; ++i) {
-            if (e.results[i].isFinal) final += e.results[i][0].transcript + '．\n\n';
-            else interim += e.results[i][0].transcript;
+            // ★ 追加: まず認識結果の前後から不要な空白を取り除く
+            const transcript = e.results[i][0].transcript.trim();
+            
+            // ★ 追加: 無音や環境ノイズによる「空っぽの文字列」だった場合は、処理をスキップ（ピリオド連打を防止）
+            if (!transcript) continue;
+
+            // ★ 変更: 検証済みの transcript を使うように修正
+            if (e.results[i].isFinal) final += transcript + '\n\n';
+            else interim += transcript;
         }
         
         final = applyDictionary(final);
@@ -652,29 +681,60 @@ function speakAndLog() {
     addMessage(getMyName(), text, 'tts');
     broadcastData(text);
 
-    // ★ 変更: テキストを空にした直後に、高さをリセットする処理を追加
     ttsInput.value = ''; 
     ttsInput.style.height = 'auto'; 
-    ttsInput.blur();
+    ttsInput.focus();
+
+    if (!isTtsEnabled) return;
+
+    // ★ 修正: 送信されたメッセージのインデックス番号を記録
+    const myMsgIndex = window.chatMessages.length - 1;
+
+    // ★ 修正: 読み上げる内容と対象の吹き出し番号を「待ち行列（キュー）」に追加する
+    ttsQueue.push({ text: text, index: myMsgIndex });
+
+    // もし現在読み上げ作業が止まっていれば、処理をスタートさせる
+    if (!isTtsProcessing) {
+        processTtsQueue();
+    }
+}
+
+// ★ 追加: キュー（待ち行列）を順番に処理していく専用の関数
+function processTtsQueue() {
+    // 待ち行列が空っぽなら、処理を完全に終了して画面のハイライトをリセットする
+    if (ttsQueue.length === 0) {
+        isTtsProcessing = false;
+        isTtsSpeaking = false;
+        renderAllMessages(); 
+        return;
+    }
+
+    isTtsProcessing = true;
+    isTtsSpeaking = true;
+
+    // 行列の先頭から1つタスクを取り出す
+    const currentTask = ttsQueue.shift();
+    const text = currentTask.text;
+    const targetIndex = currentTask.index;
+
+    // 読み上げ前に画面をリセット（前のハイライトを消す）
+    renderAllMessages();
 
     const chunks = text.match(/.*?[、。，．！？\n\s]+|.{1,25}/g) || [text];
-    let idx = 0; let offset = 0;
+    let idx = 0; 
+    let offset = 0;
 
-    // ★ 追加: 再生キューに入るタイミングでフラグをオンにする
-    isTtsSpeaking = true;
-    
-    function play() {
+    function playNextChunk() {
         if (idx >= chunks.length) { 
-            speakingQueueCount--; 
-            if(speakingQueueCount<=0) {
-                renderAllMessages(); 
-                // ★ 追加: 全ての文節を読み終わったらフラグをオフにし、マイクの耳を開ける
-                isTtsSpeaking = false;
-            }
+            // 1つのメッセージを最後まで読み終わったら、次の行列の処理へ移る
+            processTtsQueue();
             return; 
         }
+
         const uttr = new SpeechSynthesisUtterance(chunks[idx]);
-        uttr.lang = 'ja-JP'; uttr.rate = savedTtsRate; uttr.pitch = savedTtsPitch;
+        uttr.lang = 'ja-JP'; 
+        uttr.rate = savedTtsRate; 
+        uttr.pitch = savedTtsPitch;
         
         const savedVoice = localStorage.getItem('ttsVoice');
         if (savedVoice) {
@@ -683,19 +743,29 @@ function speakAndLog() {
         }
 
         uttr.onstart = () => {
-            if (idx === 0) speakingQueueCount++;
-            const el = chatLog.querySelector(`.msg-bubble[data-index="${chatMessages.length-1}"] .msg-text`);
+            // 現在処理中の正しい吹き出しに対してのみハイライトを当てる
+            const el = chatLog.querySelector(`.msg-bubble[data-index="${targetIndex}"] .msg-text`);
             if (el) {
                 const chunk = chunks[idx];
                 el.innerHTML = escapeHTML(text.slice(0, offset)) + `<span class="tts-highlight-word">${escapeHTML(chunk)}</span>` + escapeHTML(text.slice(offset + chunk.length));
             }
         };
-        uttr.onend = () => { offset += chunks[idx].length; idx++; play(); };
-        uttr.onerror = () => { offset += chunks[idx].length; idx++; play(); };
+        uttr.onend = () => { 
+            offset += chunks[idx].length; 
+            idx++; 
+            playNextChunk(); // 次の文節へ
+        };
+        uttr.onerror = (e) => { 
+            console.warn("TTS Error:", e);
+            offset += chunks[idx].length; 
+            idx++; 
+            playNextChunk(); // エラーが起きても止まらずに次へ進む
+        };
         
         setTimeout(() => window.speechSynthesis.speak(uttr), 10);
     }
-    play();
+    
+    playNextChunk();
 }
 
 // --- 環境音認識 (AudioWorklet版) ---
@@ -761,6 +831,7 @@ function showAudioCaption(t) {
 async function initSettingsLogic() { // ★ async 化
     const disp = document.getElementById('currentFontSizeDisplay');
     const toggle = document.getElementById('darkModeToggle');
+    const ttsToggle = document.getElementById('ttsEnableToggle'); // ★ 追加: スイッチの取得
     const sel = document.getElementById('voiceSelect');
     const rate = document.getElementById('rateSlider');
     const pitch = document.getElementById('pitchSlider');
@@ -769,6 +840,7 @@ async function initSettingsLogic() { // ★ async 化
     disp.textContent = currentFontSize;
     const isDark = await localforage.getItem('darkMode');
     toggle.checked = isDark === true;
+    ttsToggle.checked = isTtsEnabled; // ★ 追加: スイッチに現在の状態を反映
     rate.value = savedTtsRate;
     pitch.value = savedTtsPitch;
     document.getElementById('rateValue').textContent = savedTtsRate;
@@ -802,6 +874,13 @@ async function initSettingsLogic() { // ★ async 化
     isSettingsInitialized = true;
 
     // イベント登録（変更即反映）
+    // ★ 追加: スイッチが切り替えられた瞬間に設定を保存する
+    ttsToggle.onchange = () => {
+        isTtsEnabled = ttsToggle.checked;
+        localforage.setItem('ttsEnabled', isTtsEnabled);
+        showSetToast();
+    };
+
     document.getElementById('fontIncreaseBtn').onclick = () => { currentFontSize += 2; saveSet(); };
     document.getElementById('fontDecreaseBtn').onclick = () => { currentFontSize -= 2; saveSet(); };
     
@@ -875,3 +954,20 @@ function showSetToast() {
     t.style.display = 'block';
     setTimeout(() => t.style.display = 'none', 2000);
 }
+
+// ★ 追加: アプリが裏に回った（バックグラウンドになった）時のマイク制御（暴走・バッテリー消費防止）
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        // 画面が隠れたら、もし聞き取り中であれば一時的に停止し、再起動ループも確実に止める
+        if (isUserListening && recognition) {
+            try { recognition.stop(); } catch(e) {}
+            clearTimeout(restartTimer);
+            restartTimer = null;
+        }
+    } else {
+        // 画面に戻ってきた時、聞き取りボタンがオンのままなら安全に再起動する
+        if (isUserListening && !isApiActive) {
+            startSTT();
+        }
+    }
+});

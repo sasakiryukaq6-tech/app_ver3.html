@@ -1,6 +1,6 @@
 {
-  "name": "総合コミュニケーション支援ツール",
-  "short_name": "コミュ支援",
+  "name": "萩トーク",
+  "short_name": "萩トーク",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f4f7f6",

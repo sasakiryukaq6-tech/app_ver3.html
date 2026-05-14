@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>コミュニケーション支援ツール</title>
+    <title>萩トーク</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0d6efd">
@@ -21,6 +21,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
 </head>
 <body>
+    <div id="warningToast" style="display:none; position:fixed; top:80px; left:50%; transform:translateX(-50%); z-index:9999; background-color:#F6AA00; color:#212529; padding:10px 20px; border-radius:30px; font-weight:bold; box-shadow:0 4px 15px rgba(0,0,0,0.3); text-align:center; white-space:nowrap; animation:toastPop 0.3s forwards;">
+        ⚠️ 通信が切断されました
+    </div>
 
     <div id="nameEntryOverlay" class="name-entry-overlay">
         <div class="name-entry-card">
@@ -42,10 +45,10 @@
                     <path d="M640-80v-90q-56-18-94-64t-44-106h80q8 43 40.5 71.5T700-240h120q25 0 42.5 17.5T880-180v100H640Zm120-200q-33 0-56.5-23.5T680-360q0-33 23.5-56.5T760-440q33 0 56.5 23.5T840-360q0 33-23.5 56.5T760-280ZM360-400q0-150 105-255t255-105v80q-117 0-198.5 81.5T440-400h-80Zm160 0q0-83 58.5-141.5T720-600v80q-50 0-85 35t-35 85h-80ZM80-520v-100q0-25 17.5-42.5T140-680h120q45 0 77.5-28.5T378-780h80q-6 60-44 106t-94 64v90H80Zm120-200q-33 0-56.5-23.5T120-800q0-33 23.5-56.5T200-880q33 0 56.5 23.5T280-800q0 33-23.5 56.5T200-720Z"/>
                 </svg>
             </span>
-            <span class="text">通信設定</span>
+            <span class="text">通信機能</span>
         </button>
         
-        <h1>会話ノート</h1>
+        <h1>萩トーク</h1>
 
         <div style="display: flex; gap: 8px; align-items: center;">
             <div class="dropdown-wrapper">
@@ -84,11 +87,13 @@
     <div class="main-wrapper">
         <div id="drawerOverlay" class="drawer-overlay"></div>
         
-        <details class="sync-panel" id="syncPanel">
-            <summary class="sync-summary">
-                <svg class="ui-icon" viewBox="0 -960 960 960"><path d="M480-160q-17 0-28.5-11.5T440-200q0-17 11.5-28.5T480-240q17 0 28.5 11.5T520-200q0 17-11.5 28.5T480-160Zm-40-160v-248l-182 82-32-74 214-98v-222h80v222l214 98-32 74-182-82v248h-80Zm-286 80-50-60q72-60 163.5-93T480-626q91 0 182.5 33T826-500l-50 60q-63-53-143.5-82.5T480-552q-72 0-152.5 29.5T154-440Z"/></svg> 通信・招待機能を開く 
+        <div class="sync-panel" id="syncPanel">
+            <div class="sync-summary">
+                <svg class="ui-icon" viewBox="0 -960 960 960" fill="currentColor">
+                    <path d="M640-80v-90q-56-18-94-64t-44-106h80q8 43 40.5 71.5T700-240h120q25 0 42.5 17.5T880-180v100H640Zm120-200q-33 0-56.5-23.5T680-360q0-33 23.5-56.5T760-440q33 0 56.5 23.5T840-360q0 33-23.5 56.5T760-280ZM360-400q0-150 105-255t255-105v80q-117 0-198.5 81.5T440-400h-80Zm160 0q0-83 58.5-141.5T720-600v80q-50 0-85 35t-35 85h-80ZM80-520v-100q0-25 17.5-42.5T140-680h120q45 0 77.5-28.5T378-780h80q-6 60-44 106t-94 64v90H80Zm120-200q-33 0-56.5-23.5T120-800q0-33 23.5-56.5T200-880q33 0 56.5 23.5T280-800q0 33-23.5 56.5T200-720Z"/>
+                </svg> 通信・招待機能 
                 <span id="syncStatusSummary">（オフライン）</span>
-            </summary>
+            </div>
             <div class="sync-content">
                 <div class="my-id-area">
                     <div class="label">あなたのID：</div>
@@ -114,12 +119,21 @@
                 
                 <div id="syncStatus" class="status-text">現在オフラインです</div>
                 
+                <div class="participant-area" style="margin-top: 15px; border-top: 1px dashed #bbdefb; padding-top: 15px; text-align: left;">
+                    <div class="label" style="font-size: 0.85em; color: #555; font-weight: bold; margin-bottom: 8px;">
+                        <svg class="ui-icon" viewBox="0 -960 960 960"><path d="M0-240v-63q0-43 44-70t116-27q13 0 25 .5t23 2.5q-14 21-21 44t-7 48v65H0Zm240 0v-65q0-32 17.5-58.5T307-410q32-20 76.5-30t96.5-10q52 0 96.5 10t76.5 30q32 20 49.5 46.5T720-305v65H240Zm540 0H600v-65q0-25-7-48t-21-44q11-2 23-2.5t25-.5q72 0 116 27t44 70v63ZM160-440q-33 0-56.5-23.5T80-520q0-33 23.5-56.5T160-600q33 0 56.5 23.5T240-520q0 33-23.5 56.5T160-440Zm640 0q-33 0-56.5-23.5T720-520q0-33 23.5-56.5T800-600q33 0 56.5 23.5T880-520q0 33-23.5 56.5T800-440Zm-320-40q-50 0-85-35t-35-85q0-50 35-85t85-35q50 0 85 35t35 85q0 50-35 85t-85 35Z"/></svg> 現在の参加者
+                    </div>
+                    <ul id="participantList" style="list-style: none; padding: 0; margin: 0; font-size: 0.9em; color: #333; display: flex; flex-direction: column; gap: 6px;">
+                        <li style="color: #666;">（自分のみ）</li>
+                    </ul>
+                </div>
+                
                 <div id="qrContainer">
                     <div class="qr-label">相手のカメラで読み取ってください</div>
                     <div id="qrcode"></div>
                 </div>
             </div>
-        </details>
+        </div>
 
         <div class="chat-container">
             
@@ -195,6 +209,17 @@
             
             <div class="section-title">文字と音声の調整</div>
             <div class="settings-grid">
+                <div class="settings-item">
+                    <label>
+                        <svg class="ui-icon" viewBox="0 -960 960 960" fill="currentColor">
+                            <path d="M560-131v-82q90-26 145-100t55-167q0-93-55-167T560-747v-82q124 28 202 125.5T840-480q0 127-78 224.5T560-131ZM120-360v-240h160l200-200v640L280-360H120Zm440 40v-320q47 22 73.5 66t26.5 94q0 50-26.5 94T560-320ZM400-606l-86 86H200v160h114l86 86v-332Z"/>
+                        </svg> 自分の送信テキストの読み上げ
+                    </label>
+                    <label class="env-toggle" style="display: inline-flex;">
+                        <input type="checkbox" id="ttsEnableToggle"> 送信時に自分の端末で音声を再生する
+                    </label>
+                </div>
+
                 <div class="settings-item">
                     <label>
                         <svg class="ui-icon" viewBox="0 -960 960 960" fill="currentColor">
